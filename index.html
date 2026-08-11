@@ -158,6 +158,17 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
 .count:hover{transform:translateY(-2px)}
 .count[aria-pressed="true"]{border-color:var(--brand); background:var(--brand-soft); color:var(--brand)}
 .count em{display:block; font-family:var(--body); font-size:13px; font-weight:500; color:var(--muted); font-style:normal; margin-top:4px}
+.choices{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px}
+.choice{
+  background:var(--card); border:2px solid var(--edge); border-radius:14px; padding:12px 20px;
+  font-family:var(--display); font-weight:600; font-size:17px; box-shadow:var(--shadow);
+  transition:border-color .15s, background .15s, opacity .15s;
+}
+.choice[aria-pressed="false"]{opacity:.5}
+.choice[aria-pressed="true"]{border-color:var(--brand); background:var(--brand-soft); color:var(--brand)}
+.choice.small{font-size:15px; padding:9px 16px}
+.choice em{font-style:normal; font-family:var(--mono); font-size:13px; opacity:.65; margin-inline-start:6px}
+
 .breakdown{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:26px}
 .breakdown span{background:var(--card); border:1px solid var(--edge); border-radius:999px; padding:7px 14px; font-size:14px; color:var(--muted)}
 .breakdown b{color:var(--ink)}
@@ -240,6 +251,18 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
 .table .r .nm{flex:1; font-weight:500}
 .table .r .sc{font-family:var(--mono); font-weight:700}
 
+/* --- כרטיס הצטרפות קבוע --- */
+.joinmini{
+  position:fixed; bottom:16px; left:16px; z-index:40; width:clamp(108px,10vw,150px);
+  background:var(--card); border:1px solid var(--edge); border-radius:14px;
+  padding:9px; text-align:center; box-shadow:var(--shadow); opacity:.94;
+}
+.joinmini .qr{width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center}
+.joinmini .qr canvas{width:100%; height:100%; image-rendering:pixelated}
+.mini-code{font-weight:700; font-size:clamp(15px,1.5vw,20px); letter-spacing:.12em; color:var(--brand); margin-top:6px; direction:ltr}
+.mini-lbl{font-size:11px; color:var(--muted); margin-top:1px}
+@media (max-width:700px){.joinmini{display:none}}
+
 /* ============================================================
    PLAYER (טלפון)
    ============================================================ */
@@ -302,7 +325,7 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
   <div class="topbar">
     <div class="brandmark">
       <b>חידון כיתתי</b>
-      <small>יחידה 1 · הדפסה, משתנים וקלט</small>
+      <small id="setName">חידון אינטראקטיבי לכיתה</small>
     </div>
     <div class="right">
       <span class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">מתחבר…</span></span>
@@ -343,8 +366,17 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
     <!-- ---------- הגדרות ---------- -->
     <section id="setupView" class="hidden">
       <div class="setup">
-        <h2 style="font-size:clamp(24px,3.4vw,38px)">כמה שאלות בחידון?</h2>
-        <p style="color:var(--muted); margin-top:8px">כל נושא מיוצג, והשאלות נשארות מסודרות מהקל אל הקשה.</p>
+        <div id="setWrap" class="hidden">
+          <h2 style="font-size:clamp(22px,3vw,32px)">נושא החידון</h2>
+          <div class="choices" id="setRow"></div>
+        </div>
+        <div id="topicWrap" class="hidden" style="margin-top:26px">
+          <h2 style="font-size:clamp(20px,2.6vw,28px)">אילו נושאי משנה ייכללו?</h2>
+          <p style="color:var(--muted); margin-top:6px; font-size:15px">לחיצה מכבה או מדליקה נושא. המספר הוא כמות השאלות שיש בו.</p>
+          <div class="choices" id="topicRow"></div>
+        </div>
+        <h2 style="font-size:clamp(24px,3.4vw,38px); margin-top:30px">כמה שאלות בחידון?</h2>
+        <p style="color:var(--muted); margin-top:8px">כל נושא שנבחר מיוצג, והשאלות נשארות מסודרות מהקל אל הקשה.</p>
         <div class="counts" id="counts"></div>
         <div class="breakdown" id="breakdown"></div>
         <button class="btn lg" id="startBtn">התחלת החידון</button>
@@ -386,6 +418,13 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
       </div>
     </section>
   </div>
+
+  <!-- כרטיס הצטרפות קטן שנשאר גלוי לאורך כל החידון -->
+  <aside class="joinmini hidden" id="joinMini">
+    <div class="qr" id="qrMini"></div>
+    <div class="mini-code mono" id="miniCode"></div>
+    <div class="mini-lbl">הצטרפות מאוחרת</div>
+  </aside>
 </div>
 
 <!-- ============================ PLAYER ============================ -->
@@ -398,183 +437,195 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
   <div class="p-body" id="pBody"></div>
 </div>
 
-<!-- מאגר השאלות – מוטמע ישירות בקובץ -->
+<!-- ============================================================
+     מאגרי השאלות. כל registerQuiz הוא "נושא חידון" שאפשר לבחור
+     במסך ההגדרות. להוספת נושא – ראו README סעיף 4.
+     ============================================================ -->
 <script>
-/* ------------------------------------------------------------------
-   מאגר השאלות – יחידה 1: הדפסה, משתנים וקלט
-   ------------------------------------------------------------------
-   שימו לב: התשובה הנכונה וההסבר מקודדים בשדה k, כדי שתלמיד שיפתח
-   "הצג מקור" בדפדפן לא יראה את מפתח התשובות. זה טשטוש, לא הצפנה.
-   הקובץ הקריא לעריכה נמצא ב-questions-master.js, וההמרה נעשית
-   בעזרת encoder.html.
-
-   אפשר גם לכתוב שאלה חדשה בגלוי, בלי k, כך:
-       answer: 1,           // 0=א 1=ב 2=ג 3=ד
-       note: "הסבר קצר"
-   התוכנה תומכת בשתי הצורות. פשוט התשובה תהיה גלויה למי שיסתכל בקוד.
------------------------------------------------------------------- */
-
-const TOPICS = [
-  {
-    id: "t1",
-    name: "הדפסה, טיפוסים ושמות משתנים"
-  },
-  {
-    id: "t2",
-    name: "משתנים, השמה וחיבור מחרוזות"
-  },
-  {
-    id: "t3",
-    name: "קלט מהמשתמש והמרות"
-  },
-  {
-    id: "t4",
-    name: "המרות בין טיפוסים, char ו-ASCII"
-  }
-];
-
-const QUESTIONS = [
-  { id: 1, topic: "t1",
-    text: "מה ההבדל בין Console.Write לבין Console.WriteLine?",
-    options: ["אין הבדל, שתיהן זהות", "Write יורדת שורה בסוף ההדפסה, WriteLine לא", "WriteLine יורדת שורה בסוף ההדפסה, Write לא", "Write מדפיסה רק מספרים ו-WriteLine רק טקסט"],
-    k: "OlECS1NmTUACRxlfNB8PFA==" },
-  { id: 2, topic: "t1",
-    text: "באיזה טיפוס נשתמש כדי לשמור את מספר התלמידים בכיתה?",
-    options: ["double", "int", "string", "char"],
-    k: "OlECS1NlTUACRxkTlu20yL7wtspMsonm3aT9vvCD8rX1sr4Rlue0/L7EQbXGsr3m2KTwSb7KtsO7wfSZYaTKvvWD/EKO5bARlua09b7Ptv1MDE1Fb1Ee" },
-  { id: 3, topic: "t1",
-    text: "איזה שם משתנה אינו חוקי?",
-    options: ["nUmBeR", "num1", "1num", "mispar"],
-    k: "OlECS1NmTUACRxkTltq09EmD/7XFsonm4aT3Sb7ItvJMsrrm2qT2vvV0tv678fSbluS08L7IQbX9soLm5aTLvv16Qx8=" },
-  { id: 4, topic: "t1",
-    text: "איזה ערך מתאים למשתנה מטיפוס bool?",
-    options: ["\"true\"", "true", "1.5", "'T'"],
-    k: "OlECS1NlTUACRxkTHVEXGxwxPUBMsoHm3FO09778tvm79fSkltlDvv2D9LX8RfSvluS0wb7BtvS7zw8Rlu+0+UmDw7XEsrkRluK0/L7Itvu79fSRlupNSxQ=" },
-  { id: 5, topic: "t1",
-    text: "מה יודפס?",
-    code: "int num = 34;\nConsole.WriteLine(num);",
-    options: ["num", "34", "\"num\"", "שגיאה"],
-    k: "OlECS1NlTUACRxkTluK09b7NQbXysovm2qTzvvyDy0KO5bARlu20/L7Htsa7xAPm1aTBvsGD+0K7zPSRlu20z77EQbX9sr3m6KTJvsmD9U5Msr/m0VO0wL7KtvdCR14=" },
-  { id: 6, topic: "t1",
-    text: "איזו השמה של תו בודד כתובה נכון?",
-    options: ["char c = \"a\";", "char c = a;", "char c = 'a';", "char c = (a);"],
-    k: "OlECS1NmTUACRxkTltm0/EmD8LX5srDm0lO0yb7Ptsi79APm0KT6vvZ0tvC7zfSYluq08L7JQbX9srbm0qTwvvCD/E5Msr3m1qTLvvyD97XGRcGx0lO0+L7Ntv1Msr3m6aT4vvmD9LXGRfSqlte0/L7Itve7zw0TPA==" },
-  { id: 7, topic: "t1",
-    text: "מה יודפס?",
-    code: "Console.Write(\"Hello\");\nConsole.Write(\"World\");",
-    options: ["HelloWorld", "Hello\nWorld", "Hello World", "World\nHello"],
-    k: "OlECS1NkTUACRxkTFgEKHQx0tv679QPm2KT2vsGD8rXGRfSYlua0wb7AQbX5sr/m0VO0977BtsO7/PSVludDvsGD9LX5srQfYw4=" },
-  { id: 8, topic: "t1",
-    text: "איזה שם משתנה אסור לפי חוקי השפה?",
-    options: ["myInt", "int", "number_1", "Sum"],
-    k: "OlECS1NlTUACRxkTKB0XSb7Atvu79QPm36T6vvWD9UK7zPSvlua0wb7AQbXFsr8Rlue0wL7wtvZMsrbm3aT4vvZ0tvK7/APm0aTHvsCDyUK7+fSlltq0w77KtstMsrLm1VO08r79tv9Msr3m6KTJvsmD9UxOGA==" },
-  { id: 9, topic: "t2",
-    text: "מה יודפס?",
-    code: "string name = \"Gili\";\nname = \"Ofri\";\nConsole.WriteLine(\"my name is \" + name);",
-    options: ["my name is Gili", "my name is Ofri", "my name is GiliOfri", "my name is name"],
-    k: "OlECS1NlTUACRxkTlue0wL7KtvZMsrTm0qTKvv10tvG78PSZltK0w0mD8bXGRfSlltG0wb7OQbX4soTm1KTwvvR6Qx8=" },
-  { id: 10, topic: "t2",
-    text: "מה יודפס?",
-    code: "int num = 1;\nint newNum = num + 3;\nConsole.WriteLine(newNum);",
-    options: ["1", "3", "4", "13"],
-    k: "OlECS1NmTUACRxlfNB8PFA==" },
-  { id: 11, topic: "t2",
-    text: "מה ידפיס הקוד הבא?",
-    code: "Console.WriteLine(\"hello\" + 2 + 1);",
-    options: ["hello3", "hello21", "hello 2 1", "שגיאה"],
-    k: "OlECS1NlTUACRxkTlue0/r7NtvO78PSZYaT9vsCD/7X8sr8Rlu+08L7Ktvu7+hkRHVELDAU4Dj5OThERlui0+L78QbX4sofm21O09b7KtvW7zfSkluW0w0V0tve7+fSqluxDWEmDybXLRfSvltq0/L78tsu7zQPm0KTCvvyDwkxOGA==" },
-  { id: 12, topic: "t2",
-    text: "מה ידפיס הקוד הבא?",
-    code: "Console.WriteLine(2 + 1 + \"hello\");",
-    options: ["21hello", "3hello", "hello3", "שגיאה"],
-    k: "OlECS1NlTUACRxkTlui0+b7LQVBHVAPm1qT2vsCD8EK7/vSvltK0zb78tvu7+APm3aTHvsmD+EK7zPSlluG0y770tvdMsr/m36T0vsGD9LX6sokfYw4=" },
-  { id: 13, topic: "t2",
-    text: "מה יודפס?",
-    code: "int num = 6;\nConsole.WriteLine(\"ABC\" + num + 1);",
-    options: ["ABC7", "ABC61", "ABC6 1", "שגיאה"],
-    k: "OlECS1NlTUACRxkTluO0/L7+tvdMsrjm3aT/Sb7Ptvy78APm0KTKvvmD/bX4RRIAYZHj+kmD8LXEsrHm41O0wL7EtvW79gPm1aTzvvuDxbX1sr4Rlu20/r78tve78/SbbVO0/b7Ptv5Msrfm1KTHvvN0tv67zPSZltq0/L78T0AR" },
-  { id: 14, topic: "t2",
-    text: "איזו הכרזה על משתנה היא חוקית?",
-    options: ["int x = 5.5;", "double y = 7;", "string s = 'hello';", "char c = \"a\";"],
-    k: "OlECS1NlTUACRxkTlue09778tvZMsr0cKB0XSb7ITAYDEEFdJFO0/b7NtvJMsrPm1KT7vvyD/7X0srrm619DvvyD/bX3srwRJRwWCwUxQRtMWAMGelO0/r7BtsW7/A0TPA==" },
-  { id: 15, topic: "t2",
-    text: "מצאו את הבאג בקוד:",
-    code: "int num = 5;\nint num = 8;\nConsole.WriteLine(num);",
-    options: ["אסור להשים 8 במשתנה מטיפוס int", "הוכרז פעמיים משתנה באותו שם – בשורה השנייה צריך לכתוב ‎num = 8;", "חסרה נקודה-פסיק בסוף השורה הראשונה", "אין באג, יודפס 5"],
-    k: "OlECS1NlTUACRxkTlu208r78tvu78/Solu5DvsuD/UK7+/SYltm0yb7AQbXIsoHm3FO0+b7DtshMsrLm3aTyvvp6QbX8srTm6VO08r7OQbXEsoQRlu20wL7Ntvy7/PSsYaTyvvx0tsC7zfSrb1Ee" },
-  { id: 16, topic: "t3",
-    text: "איזה טיפוס מחזירה הפקודה ()Console.ReadLine?",
-    options: ["int", "char", "string", "double"],
-    k: "OlECS1NmTUACRxlfNB8PFA==" },
-  { id: 17, topic: "t3",
-    text: "באיזו שורה נשתמש כדי לקלוט טקסט מהמשתמש ולשמור אותו?",
-    options: ["Console.WriteLine();", "string s = Console.ReadLine();", "Console.Write(s);", "string s = \"Console.ReadLine()\";"],
-    k: "OlECS1NlTUACRxlfNB8PFA==" },
-  { id: 18, topic: "t3",
-    text: "מצאו את הבאג בקוד:",
-    code: "Console.ReadLine(\"Enter number\");",
-    options: ["אין באג", "ל-ReadLine לא מעבירים הודעה בסוגריים – יש להדפיס אותה בשורה נפרדת עם WriteLine", "צריך לכתוב Console.Read במקום Console.ReadLine", "לא צריך נקודה-פסיק"],
-    k: "OlECS1NlTUACRxlfNB8PFA==" },
-  { id: 19, topic: "t3",
-    text: "איזו שורה קולטת מהמשתמש מספר שלם?",
-    options: ["int age = Console.ReadLine();", "int age = int.Parse(Console.ReadLine());", "string age = int.Parse(Console.ReadLine());", "int age = double.Parse(Console.ReadLine());"],
-    k: "OlECS1NlTUACRxlfNB8PFA==" },
-  { id: 20, topic: "t3",
-    text: "איזו שורה קולטת מהמשתמש מספר עשרוני?",
-    options: ["double price = Console.ReadLine();", "double price = int.Parse(Console.ReadLine());", "double price = double.Parse(Console.ReadLine());", "int price = double.Parse(Console.ReadLine());"],
-    k: "OlECS1NmTUACRxlfNB8PFA==" },
-  { id: 21, topic: "t3",
-    text: "מדוע השורה הבאה תגרום לשגיאה?",
-    code: "int age = Console.ReadLine();",
-    options: ["כי ()Console.ReadLine מחזירה string, ולא ניתן להשים אותה ב-int ללא המרה", "כי חסרים סוגריים אחרי ReadLine", "כי אסור לקרוא למשתנה age", "כי צריך להשתמש ב-Console.WriteLine כדי לקלוט"],
-    k: "OlECS1NkTUACRxlfNB8PFA==" },
-  { id: 22, topic: "t3",
-    text: "המשתמש הקליד 15. מה יודפס?",
-    code: "Console.WriteLine(\"Enter your age:\");\nint age = int.Parse(Console.ReadLine());\nConsole.WriteLine(\"next year you will be \" + (age + 1) + \" years old\");",
-    options: ["next year you will be 15 years old", "next year you will be 16 years old", "next year you will be 151 years old", "next year you will be age+1 years old"],
-    k: "OlECS1NlTUACRxkTlue0yL7BtvC7zfSoluq09EmD/7X3sovm2KT0vvCD/EK7+fSmltq0+EllVEldRfSqlu20yL7wtsq7/PSsYaT/vs2DwbX1RfSlltq0wb79tve7zQ0TPA==" },
-  { id: 23, topic: "t3",
-    text: "בקוד מהשאלה הקודמת הסירו את הסוגריים סביב age + 1. המשתמש הקליד 15. מה יודפס עכשיו?",
-    code: "Console.WriteLine(\"next year you will be \" + age + 1 + \" years old\");",
-    options: ["next year you will be 16 years old", "next year you will be 151 years old", "next year you will be 15 1 years old", "שגיאת קומפילציה"],
-    k: "OlECS1NlTUACRxkTluK09b7NQbXNsrbm06TLvvCD+LXxRcGx0lO0/URlQbXEsoQRlu20wL7Btsq7zPSZYaTzvv6DybX1RRIEYaT2vveDy7XLsrLm3VNSXFh6Qx8=" },
-  { id: 24, topic: "t4",
-    text: "איזו שורה תגרום לשגיאת קומפילציה?",
-    options: ["double d = 5;", "int n = 5.0;", "double d = 5.5;", "int n = 5;"],
-    k: "OlECS1NlTUACRxkTlu1OAAcgQbXwSEdeNBEPDEmD9bX4sr3m6aT3Sb7Etve7/fSklu208b7NtshARfShluK09UmD/08IClZTLRZDvvV5CAwYRfSmluq08L7Ftvu7+APm1aT9vsGD9UK7+/SVlua0wb79tshMsoHm3FNLAAcgSExOGA==" },
-  { id: 25, topic: "t4",
-    text: "מה יודפס?",
-    code: "double d = 7.9;\nint n = (int)d;\nConsole.WriteLine(n);",
-    options: ["7.9", "8", "7", "שגיאה"],
-    k: "OlECS1NmTUACRxkTlue0/b7Ktsq78QMZKB0XQEmD9rX5sonm2qTJSb7EtshMsrfm1qT/vs50tva7x/SYltu0/L70tvtMsrbm3aTzSb7KtsC79/StltlDi+nHQVVCXAPm1aT2vs2D+0K7+Q4Gb1Ee" },
-  { id: 26, topic: "t4",
-    text: "חידה – עקבו אחרי הערכים שורה אחר שורה. מה יודפס?",
-    code: "int a = 1;\nint b = 2;\nint c = 3;\na = b;\nb = c;\nc = a + b;\nConsole.WriteLine(c);",
-    options: ["3", "4", "5", "6"],
-    k: "OlECS1NmTUACRxkTlu20y77ztvNWRUIMc19DvvmD9rXERfSqlulDC1RnTUK78PStluK0yL7BtsFMBgMMYUFIWklpQVdCR14=" },
-  { id: 27, topic: "t4",
-    text: "מה יודפס?",
-    code: "char c = 'A';\nConsole.WriteLine((int)c);",
-    options: ["A", "65", "97", "0"],
-    k: "OlECS1NlTUACRxkTZjJESb7Atve79QMHdFO0+L7MtvO7+fSbYTIwKiAdT0JEQkIWYaT3vs6D+bXMsrcRlue08L7EQVtbSwoTPA==" },
-  { id: 28, topic: "t4",
-    text: "מה יודפס?",
-    code: "int n = 66;\nchar c = (char)n;\nConsole.WriteLine(c);",
-    options: ["66", "A", "B", "b"],
-    k: "OlECS1NmTUACRxkTd0ZDvv2D9LX8RQRwZl9DvvyD/bX3srwRd0VDvv2D9LX8RQRzZl1BFA==" },
-  { id: 29, topic: "t4",
-    text: "מה יודפס?",
-    code: "char c = '7';\nConsole.WriteLine(c - '0');",
-    options: ["7", "55", "48", "'7'"],
-    k: "OlECS1NkTUACRxkTZkRESb7Atve79QPm1aTJvvx0tsu7x/SZlui0/ElhVE5MsrYcZkNESb7Atve79QMFeV1Dvv2D9rX1soLm1KTLSb7KtvW78/SolttDvvmDy0K78fSQlte0wb7AQbXOsoXm36T3U0lhVE9YXQMMYURNSb7CtvdMsrfm0qTLvvN0tva7xPSpltO0+r78tvq7/PSbYaT/vv2D/7X1sosRltm0/ESDwLXIsovm1VO09b7KtsO7wfSZb1Ee" },
-  { id: 30, topic: "t4",
-    text: "האותיות הגדולות באנגלית שמורות בטבלת ASCII ברצף. מה יודפס?",
-    code: "char letter = 'D';\nint position = letter - 'A' + 1;\nConsole.WriteLine(\"position \" + position);",
-    options: ["position 3", "position 4", "position 68", "position D"],
-    k: "OlECS1NlTUACRxkTZjdEVF9sTUJLJAQMd0ZPSb7Btv67/vSuYUVbRF9hSlNMWAMFb1Ee" }
-];
-
+  const QUIZ_SETS = [];
+  function registerQuiz(set){ QUIZ_SETS.push(set); }
 </script>
+<script>
+/* ==================== נושא חידון: יחידה 1 – הדפסה, משתנים וקלט ====================
+   התשובה הנכונה וההסבר מקודדים בשדה k. הקובץ הקריא לעריכה הוא
+   questions-master.js, וההמרה נעשית ב-encoder.html.
+   ============================================================ */
+registerQuiz({
+  id: "unit1",
+  name: "יחידה 1 – הדפסה, משתנים וקלט",
+  topics: [
+    { id: "t1", name: "הדפסה, טיפוסים ושמות משתנים" },
+    { id: "t2", name: "משתנים, השמה וחיבור מחרוזות" },
+    { id: "t3", name: "קלט מהמשתמש והמרות" },
+    { id: "t4", name: "המרות בין טיפוסים, char ו-ASCII" }
+  ],
+  questions: [
+    { id: 1, topic: "t1",
+      text: "מה ההבדל בין Console.Write לבין Console.WriteLine?",
+      options: ["אין הבדל, שתיהן זהות", "Write יורדת שורה בסוף ההדפסה, WriteLine לא", "WriteLine יורדת שורה בסוף ההדפסה, Write לא", "Write מדפיסה רק מספרים ו-WriteLine רק טקסט"],
+      k: "OlECS1NmTUACRxlfNB8PFA==" },
+    { id: 2, topic: "t1",
+      text: "באיזה טיפוס נשתמש כדי לשמור את מספר התלמידים בכיתה?",
+      options: ["double", "int", "string", "char"],
+      k: "OlECS1NlTUACRxkTlu20yL7wtspMsonm3aT9vvCD8rX1sr4Rlue0/L7EQbXGsr3m2KTwSb7KtsO7wfSZYaTKvvWD/EKO5bARlua09b7Ptv1MDE1Fb1Ee" },
+    { id: 3, topic: "t1",
+      text: "איזה שם משתנה אינו חוקי?",
+      options: ["nUmBeR", "num1", "1num", "mispar"],
+      k: "OlECS1NmTUACRxkTltq09EmD/7XFsonm4aT3Sb7ItvJMsrrm2qT2vvV0tv678fSbluS08L7IQbX9soLm5aTLvv16Qx8=" },
+    { id: 4, topic: "t1",
+      text: "איזה ערך מתאים למשתנה מטיפוס bool?",
+      options: ["\"true\"", "true", "1.5", "'T'"],
+      k: "OlECS1NlTUACRxkTHVEXGxwxPUBMsoHm3FO09778tvm79fSkltlDvv2D9LX8RfSvluS0wb7BtvS7zw8Rlu+0+UmDw7XEsrkRluK0/L7Itvu79fSRlupNSxQ=" },
+    { id: 5, topic: "t1",
+      text: "מה יודפס?",
+      code: "int num = 34;\nConsole.WriteLine(num);",
+      options: ["num", "34", "\"num\"", "שגיאה"],
+      k: "OlECS1NlTUACRxkTluK09b7NQbXysovm2qTzvvyDy0KO5bARlu20/L7Htsa7xAPm1aTBvsGD+0K7zPSRlu20z77EQbX9sr3m6KTJvsmD9U5Msr/m0VO0wL7KtvdCR14=" },
+    { id: 6, topic: "t1",
+      text: "איזו השמה של תו בודד כתובה נכון?",
+      options: ["char c = \"a\";", "char c = a;", "char c = 'a';", "char c = (a);"],
+      k: "OlECS1NmTUACRxkTltm0/EmD8LX5srDm0lO0yb7Ptsi79APm0KT6vvZ0tvC7zfSYluq08L7JQbX9srbm0qTwvvCD/E5Msr3m1qTLvvyD97XGRcGx0lO0+L7Ntv1Msr3m6aT4vvmD9LXGRfSqlte0/L7Itve7zw0TPA==" },
+    { id: 7, topic: "t1",
+      text: "מה יודפס?",
+      code: "Console.Write(\"Hello\");\nConsole.Write(\"World\");",
+      options: ["HelloWorld", "Hello\nWorld", "Hello World", "World\nHello"],
+      k: "OlECS1NkTUACRxkTFgEKHQx0tv679QPm2KT2vsGD8rXGRfSYlua0wb7AQbX5sr/m0VO0977BtsO7/PSVludDvsGD9LX5srQfYw4=" },
+    { id: 8, topic: "t1",
+      text: "איזה שם משתנה אסור לפי חוקי השפה?",
+      options: ["myInt", "int", "number_1", "Sum"],
+      k: "OlECS1NlTUACRxkTKB0XSb7Atvu79QPm36T6vvWD9UK7zPSvlua0wb7AQbXFsr8Rlue0wL7wtvZMsrbm3aT4vvZ0tvK7/APm0aTHvsCDyUK7+fSlltq0w77KtstMsrLm1VO08r79tv9Msr3m6KTJvsmD9UxOGA==" },
+    { id: 9, topic: "t2",
+      text: "מה יודפס?",
+      code: "string name = \"Gili\";\nname = \"Ofri\";\nConsole.WriteLine(\"my name is \" + name);",
+      options: ["my name is Gili", "my name is Ofri", "my name is GiliOfri", "my name is name"],
+      k: "OlECS1NlTUACRxkTlue0wL7KtvZMsrTm0qTKvv10tvG78PSZltK0w0mD8bXGRfSlltG0wb7OQbX4soTm1KTwvvR6Qx8=" },
+    { id: 10, topic: "t2",
+      text: "מה יודפס?",
+      code: "int num = 1;\nint newNum = num + 3;\nConsole.WriteLine(newNum);",
+      options: ["1", "3", "4", "13"],
+      k: "OlECS1NmTUACRxlfNB8PFA==" },
+    { id: 11, topic: "t2",
+      text: "מה ידפיס הקוד הבא?",
+      code: "Console.WriteLine(\"hello\" + 2 + 1);",
+      options: ["hello3", "hello21", "hello 2 1", "שגיאה"],
+      k: "OlECS1NlTUACRxkTlue0/r7NtvO78PSZYaT9vsCD/7X8sr8Rlu+08L7Ktvu7+hkRHVELDAU4Dj5OThERlui0+L78QbX4sofm21O09b7KtvW7zfSkluW0w0V0tve7+fSqluxDWEmDybXLRfSvltq0/L78tsu7zQPm0KTCvvyDwkxOGA==" },
+    { id: 12, topic: "t2",
+      text: "מה ידפיס הקוד הבא?",
+      code: "Console.WriteLine(2 + 1 + \"hello\");",
+      options: ["21hello", "3hello", "hello3", "שגיאה"],
+      k: "OlECS1NlTUACRxkTlui0+b7LQVBHVAPm1qT2vsCD8EK7/vSvltK0zb78tvu7+APm3aTHvsmD+EK7zPSlluG0y770tvdMsr/m36T0vsGD9LX6sokfYw4=" },
+    { id: 13, topic: "t2",
+      text: "מה יודפס?",
+      code: "int num = 6;\nConsole.WriteLine(\"ABC\" + num + 1);",
+      options: ["ABC7", "ABC61", "ABC6 1", "שגיאה"],
+      k: "OlECS1NlTUACRxkTluO0/L7+tvdMsrjm3aT/Sb7Ptvy78APm0KTKvvmD/bX4RRIAYZHj+kmD8LXEsrHm41O0wL7EtvW79gPm1aTzvvuDxbX1sr4Rlu20/r78tve78/SbbVO0/b7Ptv5Msrfm1KTHvvN0tv67zPSZltq0/L78T0AR" },
+    { id: 14, topic: "t2",
+      text: "איזו הכרזה על משתנה היא חוקית?",
+      options: ["int x = 5.5;", "double y = 7;", "string s = 'hello';", "char c = \"a\";"],
+      k: "OlECS1NlTUACRxkTlue09778tvZMsr0cKB0XSb7ITAYDEEFdJFO0/b7NtvJMsrPm1KT7vvyD/7X0srrm619DvvyD/bX3srwRJRwWCwUxQRtMWAMGelO0/r7BtsW7/A0TPA==" },
+    { id: 15, topic: "t2",
+      text: "מצאו את הבאג בקוד:",
+      code: "int num = 5;\nint num = 8;\nConsole.WriteLine(num);",
+      options: ["אסור להשים 8 במשתנה מטיפוס int", "הוכרז פעמיים משתנה באותו שם – בשורה השנייה צריך לכתוב ‎num = 8;", "חסרה נקודה-פסיק בסוף השורה הראשונה", "אין באג, יודפס 5"],
+      k: "OlECS1NlTUACRxkTlu208r78tvu78/Solu5DvsuD/UK7+/SYltm0yb7AQbXIsoHm3FO0+b7DtshMsrLm3aTyvvp6QbX8srTm6VO08r7OQbXEsoQRlu20wL7Ntvy7/PSsYaTyvvx0tsC7zfSrb1Ee" },
+    { id: 16, topic: "t3",
+      text: "איזה טיפוס מחזירה הפקודה ()Console.ReadLine?",
+      options: ["int", "char", "string", "double"],
+      k: "OlECS1NmTUACRxlfNB8PFA==" },
+    { id: 17, topic: "t3",
+      text: "באיזו שורה נשתמש כדי לקלוט טקסט מהמשתמש ולשמור אותו?",
+      options: ["Console.WriteLine();", "string s = Console.ReadLine();", "Console.Write(s);", "string s = \"Console.ReadLine()\";"],
+      k: "OlECS1NlTUACRxlfNB8PFA==" },
+    { id: 18, topic: "t3",
+      text: "מצאו את הבאג בקוד:",
+      code: "Console.ReadLine(\"Enter number\");",
+      options: ["אין באג", "ל-ReadLine לא מעבירים הודעה בסוגריים – יש להדפיס אותה בשורה נפרדת עם WriteLine", "צריך לכתוב Console.Read במקום Console.ReadLine", "לא צריך נקודה-פסיק"],
+      k: "OlECS1NlTUACRxlfNB8PFA==" },
+    { id: 19, topic: "t3",
+      text: "איזו שורה קולטת מהמשתמש מספר שלם?",
+      options: ["int age = Console.ReadLine();", "int age = int.Parse(Console.ReadLine());", "string age = int.Parse(Console.ReadLine());", "int age = double.Parse(Console.ReadLine());"],
+      k: "OlECS1NlTUACRxlfNB8PFA==" },
+    { id: 20, topic: "t3",
+      text: "איזו שורה קולטת מהמשתמש מספר עשרוני?",
+      options: ["double price = Console.ReadLine();", "double price = int.Parse(Console.ReadLine());", "double price = double.Parse(Console.ReadLine());", "int price = double.Parse(Console.ReadLine());"],
+      k: "OlECS1NmTUACRxlfNB8PFA==" },
+    { id: 21, topic: "t3",
+      text: "מדוע השורה הבאה תגרום לשגיאה?",
+      code: "int age = Console.ReadLine();",
+      options: ["כי ()Console.ReadLine מחזירה string, ולא ניתן להשים אותה ב-int ללא המרה", "כי חסרים סוגריים אחרי ReadLine", "כי אסור לקרוא למשתנה age", "כי צריך להשתמש ב-Console.WriteLine כדי לקלוט"],
+      k: "OlECS1NkTUACRxlfNB8PFA==" },
+    { id: 22, topic: "t3",
+      text: "המשתמש הקליד 15. מה יודפס?",
+      code: "Console.WriteLine(\"Enter your age:\");\nint age = int.Parse(Console.ReadLine());\nConsole.WriteLine(\"next year you will be \" + (age + 1) + \" years old\");",
+      options: ["next year you will be 15 years old", "next year you will be 16 years old", "next year you will be 151 years old", "next year you will be age+1 years old"],
+      k: "OlECS1NlTUACRxkTlue0yL7BtvC7zfSoluq09EmD/7X3sovm2KT0vvCD/EK7+fSmltq0+EllVEldRfSqlu20yL7wtsq7/PSsYaT/vs2DwbX1RfSlltq0wb79tve7zQ0TPA==" },
+    { id: 23, topic: "t3",
+      text: "בקוד מהשאלה הקודמת הסירו את הסוגריים סביב age + 1. המשתמש הקליד 15. מה יודפס עכשיו?",
+      code: "Console.WriteLine(\"next year you will be \" + age + 1 + \" years old\");",
+      options: ["next year you will be 16 years old", "next year you will be 151 years old", "next year you will be 15 1 years old", "שגיאת קומפילציה"],
+      k: "OlECS1NlTUACRxkTluK09b7NQbXNsrbm06TLvvCD+LXxRcGx0lO0/URlQbXEsoQRlu20wL7Btsq7zPSZYaTzvv6DybX1RRIEYaT2vveDy7XLsrLm3VNSXFh6Qx8=" },
+    { id: 24, topic: "t4",
+      text: "איזו שורה תגרום לשגיאת קומפילציה?",
+      options: ["double d = 5;", "int n = 5.0;", "double d = 5.5;", "int n = 5;"],
+      k: "OlECS1NlTUACRxkTlu1OAAcgQbXwSEdeNBEPDEmD9bX4sr3m6aT3Sb7Etve7/fSklu208b7NtshARfShluK09UmD/08IClZTLRZDvvV5CAwYRfSmluq08L7Ftvu7+APm1aT9vsGD9UK7+/SVlua0wb79tshMsoHm3FNLAAcgSExOGA==" },
+    { id: 25, topic: "t4",
+      text: "מה יודפס?",
+      code: "double d = 7.9;\nint n = (int)d;\nConsole.WriteLine(n);",
+      options: ["7.9", "8", "7", "שגיאה"],
+      k: "OlECS1NmTUACRxkTlue0/b7Ktsq78QMZKB0XQEmD9rX5sonm2qTJSb7EtshMsrfm1qT/vs50tva7x/SYltu0/L70tvtMsrbm3aTzSb7KtsC79/StltlDi+nHQVVCXAPm1aT2vs2D+0K7+Q4Gb1Ee" },
+    { id: 26, topic: "t4",
+      text: "חידה – עקבו אחרי הערכים שורה אחר שורה. מה יודפס?",
+      code: "int a = 1;\nint b = 2;\nint c = 3;\na = b;\nb = c;\nc = a + b;\nConsole.WriteLine(c);",
+      options: ["3", "4", "5", "6"],
+      k: "OlECS1NmTUACRxkTlu20y77ztvNWRUIMc19DvvmD9rXERfSqlulDC1RnTUK78PStluK0yL7BtsFMBgMMYUFIWklpQVdCR14=" },
+    { id: 27, topic: "t4",
+      text: "מה יודפס?",
+      code: "char c = 'A';\nConsole.WriteLine((int)c);",
+      options: ["A", "65", "97", "0"],
+      k: "OlECS1NlTUACRxkTZjJESb7Atve79QMHdFO0+L7MtvO7+fSbYTIwKiAdT0JEQkIWYaT3vs6D+bXMsrcRlue08L7EQVtbSwoTPA==" },
+    { id: 28, topic: "t4",
+      text: "מה יודפס?",
+      code: "int n = 66;\nchar c = (char)n;\nConsole.WriteLine(c);",
+      options: ["66", "A", "B", "b"],
+      k: "OlECS1NmTUACRxkTd0ZDvv2D9LX8RQRwZl9DvvyD/bX3srwRd0VDvv2D9LX8RQRzZl1BFA==" },
+    { id: 29, topic: "t4",
+      text: "מה יודפס?",
+      code: "char c = '7';\nConsole.WriteLine(c - '0');",
+      options: ["7", "55", "48", "'7'"],
+      k: "OlECS1NkTUACRxkTZkRESb7Atve79QPm1aTJvvx0tsu7x/SZlui0/ElhVE5MsrYcZkNESb7Atve79QMFeV1Dvv2D9rX1soLm1KTLSb7KtvW78/SolttDvvmDy0K78fSQlte0wb7AQbXOsoXm36T3U0lhVE9YXQMMYURNSb7CtvdMsrfm0qTLvvN0tva7xPSpltO0+r78tvq7/PSbYaT/vv2D/7X1sosRltm0/ESDwLXIsovm1VO09b7KtsO7wfSZb1Ee" },
+    { id: 30, topic: "t4",
+      text: "האותיות הגדולות באנגלית שמורות בטבלת ASCII ברצף. מה יודפס?",
+      code: "char letter = 'D';\nint position = letter - 'A' + 1;\nConsole.WriteLine(\"position \" + position);",
+      options: ["position 3", "position 4", "position 68", "position D"],
+      k: "OlECS1NlTUACRxkTZjdEVF9sTUJLJAQMd0ZPSb7Btv67/vSuYUVbRF9hSlNMWAMFb1Ee" }
+  ]
+});
+</script>
+
+<!-- ============================================================
+     תבנית להוספת נושא חידון נוסף.
+     מוחקים את שורת הפתיחה ואת שורת הסיום של ההערה הזאת,
+     ואז ממלאים id, name, topics ו-questions.
+     ============================================================
+<script>
+registerQuiz({
+  id: "unit2",
+  name: "יחידה 2 – תנאים",
+  topics: [
+    { id: "c1", name: "משפט if" },
+    { id: "c2", name: "אופרטורים לוגיים" }
+  ],
+  questions: [
+    { id: 1, topic: "c1",
+      text: "מה יודפס?",
+      code: "int x = 5;\nif (x > 3)\n    Console.WriteLine(\"big\");",
+      options: ["big", "5", "שום דבר", "שגיאה"],
+      answer: 0,
+      note: "התנאי מתקיים ולכן השורה מודפסת." }
+  ]
+});
+</script>
+     ============================================================ -->
 <!-- ספריית QR: מקור ראשי, ואם נכשל – מקור גיבוי -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"
         onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js';document.head.appendChild(s);"></script>
@@ -636,18 +687,22 @@ function consoleBlock(code, sizeVar){
    ובתוך כל נושא – פריסה אחידה על ציר הקושי. בסוף ממיינים לפי id
    כדי שהחידון כולו יישאר מהקל אל הקשה.
    ================================================================ */
-function pickQuestions(all, n){
-  const groups = TOPICS
-    .map(t => all.filter(q => q.topic === t.id).sort((a,b)=>a.id-b.id))
-    .filter(g => g.length);
-  n = Math.max(groups.length, Math.min(n, all.length));
+function pickQuestions(pool, n){
+  const byTopic = new Map();
+  pool.forEach(q => {
+    if(!byTopic.has(q.topic)) byTopic.set(q.topic, []);
+    byTopic.get(q.topic).push(q);
+  });
+  const groups = [...byTopic.values()].map(g => g.slice().sort((a,b)=>a.id-b.id));
+  if(!groups.length) return [];
+  n = Math.max(groups.length, Math.min(n, pool.length));
 
   const quota = groups.map(()=>1);                  // לפחות אחת מכל נושא
   let left = n - groups.length;
   const spare = groups.map(g => g.length - 1);
   const spareTotal = spare.reduce((a,b)=>a+b,0);
 
-  const exact  = spare.map(s => spareTotal ? left * s / spareTotal : 0);
+  const exact  = spare.map(sp => spareTotal ? left * sp / spareTotal : 0);
   const floors = exact.map(Math.floor);
   let used = floors.reduce((a,b)=>a+b,0);
   const order = exact.map((e,i)=>({i, frac:e - Math.floor(e)})).sort((a,b)=>b.frac - a.frac);
@@ -670,8 +725,8 @@ function pickQuestions(all, n){
   });
   return [...new Set(picked)].sort((a,b)=>a.id-b.id);
 }
-function breakdownOf(list){
-  return TOPICS.map(t => ({name:t.name, n:list.filter(q=>q.topic===t.id).length})).filter(x=>x.n);
+function breakdownOf(set, list){
+  return set.topics.map(t => ({name:t.name, n:list.filter(q=>q.topic===t.id).length})).filter(x=>x.n);
 }
 
 /* ================================================================
@@ -693,7 +748,8 @@ if(!IS_PLAYER){ (function board(){
   const S = {
     code:'', peer:null, phase:'lobby',
     players:new Map(),          // id -> {id,name,score,conn,connected,choice,secs,gain}
-    list:[], qi:-1, qStart:0, locked:false, count:15, ans:null, note:null
+    list:[], qi:-1, qStart:0, locked:false, count:15, ans:null, note:null,
+    set:null, topicSel:null
   };
 
   /* ---------- חיבור ---------- */
@@ -721,22 +777,25 @@ if(!IS_PLAYER){ (function board(){
     $('#codePill').classList.remove('hidden');
     $('#joinUrl').textContent = url.replace(/^https?:\/\//,'');
     if(location.protocol === 'file:') $('#fileWarn').classList.remove('hidden');
+    $('#miniCode').textContent = S.code;
     renderQR(url);
+    renderQR(url, 0, '#qrMini', 300);
   }
-  function renderQR(url, tries){
+  function renderQR(url, tries, sel, px){
     tries = tries || 0;
-    const box = $('#qrbox');
+    const box = $(sel || '#qrbox');
     const ready = (window.QRCode && QRCode.toCanvas) || window.QRious;
     if(!ready){                                   // הספרייה עוד בטעינה – ננסה שוב
-      if(tries < 30) return setTimeout(()=>renderQR(url, tries+1), 200);
+      if(tries < 30) return setTimeout(()=>renderQR(url, tries+1, sel, px), 200);
       return fallback();
     }
     box.innerHTML = '';
     const cv = document.createElement('canvas'); box.appendChild(cv);
+    const size = px || 640;
     if(window.QRCode && QRCode.toCanvas)
-      QRCode.toCanvas(cv, url, {width:640, margin:1, color:{dark:'#1C2A35', light:'#FFFFFF'}}, err=>{ if(err) fallback(); });
+      QRCode.toCanvas(cv, url, {width:size, margin:1, color:{dark:'#1C2A35', light:'#FFFFFF'}}, err=>{ if(err) fallback(); });
     else
-      new QRious({element:cv, value:url, size:640, foreground:'#1C2A35', level:'M'});
+      new QRious({element:cv, value:url, size:size, foreground:'#1C2A35', level:'M'});
     function fallback(){
       box.innerHTML = '<div style="font-size:15px;color:var(--muted);padding:16px;line-height:1.6">אין חיבור לספריית ה-QR.<br>הכתיבו לתלמידים את הכתובת והקוד שמתחת.</div>';
     }
@@ -757,8 +816,10 @@ if(!IS_PLAYER){ (function board(){
       const name = String(msg.name||'').trim().slice(0,14);
       if(!name) return conn.send({t:'rejected', why:'צריך שם'});
       const same = [...S.players.values()].find(p => p.name.toLowerCase() === name.toLowerCase());
-      const busy = same && same.conn && same.conn.open && same.conn !== conn;
-      if(busy) return conn.send({t:'rejected', why:'השם הזה כבר תפוס – בחרו שם אחר'});
+      if(same && same.conn && same.conn !== conn && same.conn.open){
+        /* אותו שם מהתקן אחר – החיבור הישן נסגר והחדש יורש את הניקוד */
+        try{ same.conn.send({t:'replaced'}); same.conn.close(); }catch(e){}
+      }
       const p = same || {id:conn.peer, name, score:0, choice:null, secs:0, gain:0};
       p.conn = conn; p.connected = true;
       S.players.set(p.id, p);
@@ -805,23 +866,67 @@ if(!IS_PLAYER){ (function board(){
   }
 
   /* ---------- הגדרות ---------- */
-  const OPTIONS_N = [10,15,20,25,30].filter(n => n <= QUESTIONS.length);
+  const STEP_SIZES = [5,10,15,20,25,30,40,50];
+  const poolOf = () => S.set.questions.filter(q => S.topicSel.has(q.topic));
+
   function paintSetup(){
+    if(!S.set) S.set = QUIZ_SETS[0];
+    const set = S.set;
+
+    /* בחירת נושא החידון (מוסתר כשיש מאגר אחד בלבד) */
+    $('#setWrap').classList.toggle('hidden', QUIZ_SETS.length < 2);
+    const sr = $('#setRow'); sr.innerHTML = '';
+    QUIZ_SETS.forEach(qs=>{
+      const b = el('button','choice', qs.name);
+      b.setAttribute('aria-pressed', String(qs === set));
+      b.onclick = ()=>{ S.set = qs; S.topicSel = null; paintSetup(); };
+      sr.appendChild(b);
+    });
+
+    if(!S.topicSel) S.topicSel = new Set(set.topics.map(t=>t.id));
+
+    /* בחירת נושאי משנה */
+    const withQs = set.topics.filter(t => set.questions.some(q=>q.topic===t.id));
+    $('#topicWrap').classList.toggle('hidden', withQs.length < 2);
+    const tr = $('#topicRow'); tr.innerHTML = '';
+    withQs.forEach(t=>{
+      const n = set.questions.filter(q=>q.topic===t.id).length;
+      const b = el('button','choice small');
+      b.append(t.name + ' ');
+      b.appendChild(el('em', null, String(n)));
+      b.setAttribute('aria-pressed', String(S.topicSel.has(t.id)));
+      b.onclick = ()=>{
+        if(S.topicSel.has(t.id)){
+          if(S.topicSel.size === 1) return;          // חייב להישאר נושא אחד לפחות
+          S.topicSel.delete(t.id);
+        } else S.topicSel.add(t.id);
+        paintSetup();
+      };
+      tr.appendChild(b);
+    });
+
+    /* כמות שאלות – מותאמת לגודל המאגר שנבחר */
+    const pool = poolOf();
+    const sizes = STEP_SIZES.filter(n => n < pool.length);
+    sizes.push(pool.length);
+    if(!sizes.includes(S.count)) S.count = sizes.reduce((best,n)=> Math.abs(n-S.count) < Math.abs(best-S.count) ? n : best, sizes[0]);
+
     const box = $('#counts'); box.innerHTML = '';
-    OPTIONS_N.forEach(n=>{
+    sizes.forEach(n=>{
       const b = el('button','count');
-      b.innerHTML = n + '<em>' + (n === QUESTIONS.length ? 'הכל' : 'שאלות') + '</em>';
+      b.append(String(n));
+      b.appendChild(el('em', null, n === pool.length ? 'הכל' : 'שאלות'));
       b.setAttribute('aria-pressed', String(n === S.count));
       b.onclick = ()=>{ S.count = n; paintSetup(); };
       box.appendChild(b);
     });
-    const bd = breakdownOf(pickQuestions(QUESTIONS, S.count));
+
     const bbox = $('#breakdown'); bbox.innerHTML = '';
-    bd.forEach(x => {
-      const s = el('span');
-      s.append(x.name + ' · ');
-      s.appendChild(el('b', null, String(x.n)));
-      bbox.appendChild(s);
+    breakdownOf(set, pickQuestions(pool, S.count)).forEach(x=>{
+      const sp = el('span');
+      sp.append(x.name + ' · ');
+      sp.appendChild(el('b', null, String(x.n)));
+      bbox.appendChild(sp);
     });
   }
 
@@ -832,7 +937,7 @@ if(!IS_PLAYER){ (function board(){
     S.players.forEach(p => { p.choice = null; p.secs = 0; p.gain = 0; });
     const q = S.list[S.qi];
 
-    $('#qtopic').textContent = (TOPICS.find(t => t.id === q.topic)||{}).name || '';
+    $('#qtopic').textContent = (S.set.topics.find(t => t.id === q.topic)||{}).name || '';
     $('#qtext').textContent = q.text;
     $('#qcode').innerHTML = '';
     if(q.code) $('#qcode').appendChild(consoleBlock(q.code));
@@ -952,11 +1057,14 @@ if(!IS_PLAYER){ (function board(){
   /* ---------- ניווט בין מסכים ---------- */
   function show(id){
     ['lobbyView','setupView','playView','finalView'].forEach(v => $('#'+v).classList.toggle('hidden', v !== id));
+    $('#joinMini').classList.toggle('hidden', id === 'lobbyView' || !S.code);   // בלובי ה-QR הגדול ממילא מוצג
   }
   $('#toSetup').onclick  = ()=>{ show('setupView'); paintSetup(); };
   $('#backLobby').onclick= ()=> show('lobbyView');
   $('#startBtn').onclick = ()=>{
-    S.list = pickQuestions(QUESTIONS, S.count);
+    S.list = pickQuestions(poolOf(), S.count);
+    if(!S.list.length) return;
+    $('#setName').textContent = S.set.name;
     S.qi = 0; show('playView'); ask();
     window.onbeforeunload = e => { e.preventDefault(); return ''; };
   };
@@ -989,7 +1097,7 @@ if(!IS_PLAYER){ (function board(){
    ================================================================ */
 if(IS_PLAYER){ (function playerApp(){
 
-  const P = {peer:null, conn:null, name:'', score:0, q:null, picked:null};
+  const P = {peer:null, conn:null, name:'', score:0, q:null, picked:null, tries:0, replaced:false};
   const body = $('#pBody');
   const clear = ()=> body.innerHTML = '';
   function pstatus(text, cls){ $('#pStatus').textContent = text; $('#pDot').className = 'dot' + (cls?' '+cls:''); }
@@ -1023,22 +1131,31 @@ if(IS_PLAYER){ (function playerApp(){
 
   function connect(){
     waiting('מתחבר ללוח…');
-    if(!P.peer){
-      P.peer = new Peer({debug:1});
-      P.peer.on('error', e=>{
-        if(e.type === 'peer-unavailable'){ pstatus('אין חדר כזה','err'); askName('לא נמצא לוח פעיל עם הקוד ' + ROOM + '. בדקו את הקוד או בקשו מהמורה לרענן.'); }
-        else pstatus('שגיאת רשת','err');
-      });
-      P.peer.on('open', open);
-      P.peer.on('disconnected', ()=>{ pstatus('מנסה להתחבר…','err'); P.peer.reconnect(); });
-    } else open();
+    if(P.peer) return dial();
+    P.peer = new Peer({debug:1});
+    P.peer.on('open', dial);
+    P.peer.on('disconnected', ()=>{ pstatus('מתחבר מחדש…','err'); try{ P.peer.reconnect(); }catch(e){} });
+    P.peer.on('error', e=>{
+      if(e.type === 'peer-unavailable'){
+        if(P.tries++ < 5) return setTimeout(dial, 2500);
+        pstatus('אין חדר כזה','err');
+        askName('לא נמצא לוח פעיל עם הקוד ' + ROOM + '. בדקו את הקוד או בקשו מהמורה לרענן.');
+      } else pstatus('שגיאת רשת','err');
+    });
+  }
 
-    function open(){
-      P.conn = P.peer.connect(CFG.PREFIX + ROOM, {reliable:true});
-      P.conn.on('open', ()=>{ pstatus('מחובר','on'); P.conn.send({t:'join', name:P.name}); });
-      P.conn.on('data', onMsg);
-      P.conn.on('close', ()=>{ pstatus('נותק','err'); waiting('החיבור ללוח נותק. נסו לרענן את הדף.'); });
-    }
+  /* חיוג ללוח. נקרא גם בכל ניתוק – הלוח מזהה את השם ומחזיר
+     את הניקוד והמצב, כך שאין צורך להקליד שם מחדש. */
+  function dial(){
+    if(P.replaced) return;
+    P.conn = P.peer.connect(CFG.PREFIX + ROOM, {reliable:true});
+    P.conn.on('open', ()=>{ P.tries = 0; pstatus('מחובר','on'); P.conn.send({t:'join', name:P.name}); });
+    P.conn.on('data', onMsg);
+    P.conn.on('close', ()=>{
+      if(P.replaced) return;
+      pstatus('מתחבר מחדש…','err');
+      setTimeout(dial, 2000);
+    });
   }
 
   function onMsg(m){
@@ -1046,6 +1163,11 @@ if(IS_PLAYER){ (function playerApp(){
     switch(m.t){
       case 'accepted': P.score = m.score||0; $('#pScore').textContent = P.score; break;
       case 'rejected': askName(m.why); break;
+      case 'replaced':
+        P.replaced = true;
+        waiting('נכנסת לחידון ממכשיר אחר', 'החיבור כאן נסגר כדי שלא יהיו שני חיבורים לאותו שם.');
+        pstatus('הועבר למכשיר אחר','err');
+        break;
       case 'waiting':  waiting('חכו למורה – החידון עוד לא התחיל'); break;
       case 'question': showQuestion(m); break;
       case 'locked-in':P.picked = m.choice; markPicked(); break;
