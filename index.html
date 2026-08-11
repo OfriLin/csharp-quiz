@@ -158,16 +158,44 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
 .count:hover{transform:translateY(-2px)}
 .count[aria-pressed="true"]{border-color:var(--brand); background:var(--brand-soft); color:var(--brand)}
 .count em{display:block; font-family:var(--body); font-size:13px; font-weight:500; color:var(--muted); font-style:normal; margin-top:4px}
-.choices{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:14px}
-.choice{
-  background:var(--card); border:2px solid var(--edge); border-radius:14px; padding:12px 20px;
-  font-family:var(--display); font-weight:600; font-size:17px; box-shadow:var(--shadow);
-  transition:border-color .15s, background .15s, opacity .15s;
+/* יחידות – כרטיסים גדולים, בחירה יחידה */
+.subjects{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:12px; margin-top:16px; text-align:start;
 }
-.choice[aria-pressed="false"]{opacity:.5}
-.choice[aria-pressed="true"]{border-color:var(--brand); background:var(--brand-soft); color:var(--brand)}
-.choice.small{font-size:15px; padding:9px 16px}
-.choice em{font-style:normal; font-family:var(--mono); font-size:13px; opacity:.65; margin-inline-start:6px}
+.subject{
+  position:relative; overflow:hidden; display:flex; flex-direction:column; gap:3px;
+  background:var(--card); border:2px solid var(--edge); border-radius:16px;
+  padding:16px 20px; box-shadow:var(--shadow); transition:border-color .15s, background .15s, transform .15s;
+}
+.subject::before{content:''; position:absolute; inset-block:0; inset-inline-start:0; width:6px; background:var(--edge); transition:background .15s}
+.subject:hover{transform:translateY(-2px)}
+.subject[aria-pressed="true"]{border-color:var(--brand); background:var(--brand-soft)}
+.subject[aria-pressed="true"]::before{background:var(--brand)}
+.subject .t{font-family:var(--display); font-weight:700; font-size:clamp(17px,1.8vw,20px); line-height:1.25}
+.subject .m{font-size:13px; color:var(--muted)}
+.subject[aria-pressed="true"] .m{color:var(--brand)}
+
+/* נושאי משנה – צ'יפים קטנים עם סימון דלוק/כבוי */
+.topics-row{display:flex; gap:9px; justify-content:center; flex-wrap:wrap; margin-top:14px}
+.topicchip{
+  display:inline-flex; align-items:center; gap:9px; background:var(--card);
+  border:1.5px solid var(--edge); border-radius:999px; padding:8px 16px;
+  font-size:15px; font-weight:500; box-shadow:var(--shadow); transition:opacity .15s, border-color .15s;
+}
+.topicchip .box{
+  width:19px; height:19px; border-radius:6px; border:1.5px solid var(--edge);
+  display:grid; place-items:center; font-size:12px; color:transparent; transition:background .15s, color .15s;
+}
+.topicchip[aria-pressed="true"]{border-color:#AEBBDF}
+.topicchip[aria-pressed="true"] .box{background:var(--brand); border-color:var(--brand); color:#fff}
+.topicchip[aria-pressed="false"]{opacity:.5}
+.topicchip em{font-style:normal; font-family:var(--mono); font-size:12px; color:var(--muted)}
+
+.eyebrow{
+  font-family:var(--display); font-weight:700; font-size:13px; letter-spacing:.12em;
+  color:var(--muted); text-transform:none;
+}
 
 .breakdown{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:26px}
 .breakdown span{background:var(--card); border:1px solid var(--edge); border-radius:999px; padding:7px 14px; font-size:14px; color:var(--muted)}
@@ -329,15 +357,15 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
     </div>
     <div class="right">
       <span class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">מתחבר…</span></span>
-      <span class="pill hidden" id="codePill">קוד חדר: <b class="mono" id="codePillVal" style="letter-spacing:.1em"></b></span>
       <span class="pill" id="countPill"><span id="countVal">0</span> מחוברים</span>
+      <button class="btn ghost hidden" id="homeBtn">דף הבית</button>
       <button class="btn ghost" id="fsBtn" title="מסך מלא (F)">מסך מלא</button>
     </div>
   </div>
 
   <div class="wrap">
     <!-- ---------- לובי ---------- -->
-    <section id="lobbyView">
+    <section id="lobbyView" class="hidden">
       <div class="lobby">
         <div class="joincard">
           <h2>סרקו והצטרפו</h2>
@@ -353,34 +381,36 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
 
         <div class="lobby-side">
           <h2>מי כבר כאן?</h2>
-          <p class="lede">כשכולם ברשימה – בוחרים כמה שאלות ומתחילים. אפשר להצטרף גם באמצע החידון.</p>
+          <p class="lede" id="lobbyLede">כשכולם ברשימה – מתחילים. אפשר להצטרף גם באמצע החידון.</p>
           <div class="counter"><span id="lobbyCount">0</span><small>תלמידים מחוברים</small></div>
           <div class="players" id="playersList"></div>
-          <div style="margin-top:28px">
-            <button class="btn lg" id="toSetup">המשך להגדרת החידון</button>
+          <div style="margin-top:28px; display:flex; gap:10px; flex-wrap:wrap">
+            <button class="btn lg" id="startBtn">התחלת החידון</button>
+            <button class="btn ghost" id="backSetup">חזרה להגדרות</button>
           </div>
         </div>
       </div>
     </section>
 
     <!-- ---------- הגדרות ---------- -->
-    <section id="setupView" class="hidden">
+    <section id="setupView">
       <div class="setup">
         <div id="setWrap" class="hidden">
-          <h2 style="font-size:clamp(22px,3vw,32px)">נושא החידון</h2>
-          <div class="choices" id="setRow"></div>
+          <h2 style="font-size:clamp(24px,3.2vw,34px)">בחרו יחידה</h2>
+          <div class="subjects" id="setRow"></div>
         </div>
-        <div id="topicWrap" class="hidden" style="margin-top:26px">
-          <h2 style="font-size:clamp(20px,2.6vw,28px)">אילו נושאי משנה ייכללו?</h2>
-          <p style="color:var(--muted); margin-top:6px; font-size:15px">לחיצה מכבה או מדליקה נושא. המספר הוא כמות השאלות שיש בו.</p>
-          <div class="choices" id="topicRow"></div>
+        <div id="topicWrap" class="hidden" style="margin-top:34px">
+          <div class="eyebrow">נושאי משנה</div>
+          <p style="color:var(--muted); margin:2px 0 0; font-size:15px">לחיצה מכבה או מדליקה נושא. המספר הוא כמות השאלות שיש בו.</p>
+          <div class="topics-row" id="topicRow"></div>
         </div>
-        <h2 style="font-size:clamp(24px,3.4vw,38px); margin-top:30px">כמה שאלות בחידון?</h2>
-        <p style="color:var(--muted); margin-top:8px">כל נושא שנבחר מיוצג, והשאלות נשארות מסודרות מהקל אל הקשה.</p>
+        <div style="margin-top:34px">
+          <div class="eyebrow">אורך החידון</div>
+          <p style="color:var(--muted); margin:2px 0 0; font-size:15px">כל נושא שנבחר מיוצג, והשאלות נשארות מסודרות מהקל אל הקשה.</p>
+        </div>
         <div class="counts" id="counts"></div>
         <div class="breakdown" id="breakdown"></div>
-        <button class="btn lg" id="startBtn">התחלת החידון</button>
-        <div style="margin-top:14px"><button class="btn ghost" id="backLobby">חזרה ללובי</button></div>
+        <button class="btn lg" id="toLobby">פתיחת חדר לתלמידים</button>
       </div>
     </section>
 
@@ -414,7 +444,7 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
       <div class="podium" id="podium"></div>
       <div class="table" id="finalTable"></div>
       <div style="text-align:center; margin-top:26px">
-        <button class="btn ghost" id="againBtn">חידון חדש (טעינה מחדש)</button>
+        <button class="btn ghost" id="againBtn">חידון נוסף עם אותה כיתה</button>
       </div>
     </section>
   </div>
@@ -438,194 +468,330 @@ button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; bo
 </div>
 
 <!-- ============================================================
-     מאגרי השאלות. כל registerQuiz הוא "נושא חידון" שאפשר לבחור
-     במסך ההגדרות. להוספת נושא – ראו README סעיף 4.
+     מאגרי השאלות.
+     כל registerQuiz הוא יחידה אחת, שנבחרת במסך ההגדרות.
+     האזור שבין BANKS-START ל-BANKS-END נבנה אוטומטית מהגיליון
+     בעזרת builder.html. אפשר לערוך אותו ביד, אבל הבנייה הבאה
+     תדרוס את השינוי – מקור האמת הוא הגיליון. פרטים ב-README סעיף 4.
      ============================================================ -->
 <script>
   const QUIZ_SETS = [];
   function registerQuiz(set){ QUIZ_SETS.push(set); }
 </script>
+
+<!-- BANKS-START -->
 <script>
-/* ==================== נושא חידון: יחידה 1 – הדפסה, משתנים וקלט ====================
-   התשובה הנכונה וההסבר מקודדים בשדה k. הקובץ הקריא לעריכה הוא
-   questions-master.js, וההמרה נעשית ב-encoder.html.
-   ============================================================ */
+/* יחידה 1 – הדפסה, משתנים וקלט – 30 שאלות */
 registerQuiz({
   id: "unit1",
   name: "יחידה 1 – הדפסה, משתנים וקלט",
   topics: [
-    { id: "t1", name: "הדפסה, טיפוסים ושמות משתנים" },
-    { id: "t2", name: "משתנים, השמה וחיבור מחרוזות" },
-    { id: "t3", name: "קלט מהמשתמש והמרות" },
-    { id: "t4", name: "המרות בין טיפוסים, char ו-ASCII" }
+    { id: "הדפסה, משתנים וקלט", name: "הדפסה, משתנים וקלט" },
+    { id: "char וASCII", name: "char וASCII" },
+    { id: "המרות", name: "המרות" }
   ],
   questions: [
-    { id: 1, topic: "t1",
+    { id: 1, topic: "הדפסה, משתנים וקלט",
       text: "מה ההבדל בין Console.Write לבין Console.WriteLine?",
       options: ["אין הבדל, שתיהן זהות", "Write יורדת שורה בסוף ההדפסה, WriteLine לא", "WriteLine יורדת שורה בסוף ההדפסה, Write לא", "Write מדפיסה רק מספרים ו-WriteLine רק טקסט"],
       k: "OlECS1NmTUACRxlfNB8PFA==" },
-    { id: 2, topic: "t1",
+    { id: 2, topic: "הדפסה, משתנים וקלט",
       text: "באיזה טיפוס נשתמש כדי לשמור את מספר התלמידים בכיתה?",
       options: ["double", "int", "string", "char"],
       k: "OlECS1NlTUACRxkTlu20yL7wtspMsonm3aT9vvCD8rX1sr4Rlue0/L7EQbXGsr3m2KTwSb7KtsO7wfSZYaTKvvWD/EKO5bARlua09b7Ptv1MDE1Fb1Ee" },
-    { id: 3, topic: "t1",
+    { id: 3, topic: "הדפסה, משתנים וקלט",
       text: "איזה שם משתנה אינו חוקי?",
       options: ["nUmBeR", "num1", "1num", "mispar"],
       k: "OlECS1NmTUACRxkTltq09EmD/7XFsonm4aT3Sb7ItvJMsrrm2qT2vvV0tv678fSbluS08L7IQbX9soLm5aTLvv16Qx8=" },
-    { id: 4, topic: "t1",
+    { id: 4, topic: "הדפסה, משתנים וקלט",
       text: "איזה ערך מתאים למשתנה מטיפוס bool?",
-      options: ["\"true\"", "true", "1.5", "'T'"],
+      options: ["\"true\"", "TRUE", "1.5", "T'"],
       k: "OlECS1NlTUACRxkTHVEXGxwxPUBMsoHm3FO09778tvm79fSkltlDvv2D9LX8RfSvluS0wb7BtvS7zw8Rlu+0+UmDw7XEsrkRluK0/L7Itvu79fSRlupNSxQ=" },
-    { id: 5, topic: "t1",
+    { id: 5, topic: "הדפסה, משתנים וקלט",
       text: "מה יודפס?",
       code: "int num = 34;\nConsole.WriteLine(num);",
       options: ["num", "34", "\"num\"", "שגיאה"],
       k: "OlECS1NlTUACRxkTluK09b7NQbXysovm2qTzvvyDy0KO5bARlu20/L7Htsa7xAPm1aTBvsGD+0K7zPSRlu20z77EQbX9sr3m6KTJvsmD9U5Msr/m0VO0wL7KtvdCR14=" },
-    { id: 6, topic: "t1",
+    { id: 6, topic: "char וASCII",
       text: "איזו השמה של תו בודד כתובה נכון?",
       options: ["char c = \"a\";", "char c = a;", "char c = 'a';", "char c = (a);"],
       k: "OlECS1NmTUACRxkTltm0/EmD8LX5srDm0lO0yb7Ptsi79APm0KT6vvZ0tvC7zfSYluq08L7JQbX9srbm0qTwvvCD/E5Msr3m1qTLvvyD97XGRcGx0lO0+L7Ntv1Msr3m6aT4vvmD9LXGRfSqlte0/L7Itve7zw0TPA==" },
-    { id: 7, topic: "t1",
+    { id: 7, topic: "הדפסה, משתנים וקלט",
       text: "מה יודפס?",
       code: "Console.Write(\"Hello\");\nConsole.Write(\"World\");",
       options: ["HelloWorld", "Hello\nWorld", "Hello World", "World\nHello"],
       k: "OlECS1NkTUACRxkTFgEKHQx0tv679QPm2KT2vsGD8rXGRfSYlua0wb7AQbX5sr/m0VO0977BtsO7/PSVludDvsGD9LX5srQfYw4=" },
-    { id: 8, topic: "t1",
+    { id: 8, topic: "הדפסה, משתנים וקלט",
       text: "איזה שם משתנה אסור לפי חוקי השפה?",
       options: ["myInt", "int", "number_1", "Sum"],
       k: "OlECS1NlTUACRxkTKB0XSb7Atvu79QPm36T6vvWD9UK7zPSvlua0wb7AQbXFsr8Rlue0wL7wtvZMsrbm3aT4vvZ0tvK7/APm0aTHvsCDyUK7+fSlltq0w77KtstMsrLm1VO08r79tv9Msr3m6KTJvsmD9UxOGA==" },
-    { id: 9, topic: "t2",
+    { id: 9, topic: "הדפסה, משתנים וקלט",
       text: "מה יודפס?",
       code: "string name = \"Gili\";\nname = \"Ofri\";\nConsole.WriteLine(\"my name is \" + name);",
       options: ["my name is Gili", "my name is Ofri", "my name is GiliOfri", "my name is name"],
       k: "OlECS1NlTUACRxkTlue0wL7KtvZMsrTm0qTKvv10tvG78PSZltK0w0mD8bXGRfSlltG0wb7OQbX4soTm1KTwvvR6Qx8=" },
-    { id: 10, topic: "t2",
+    { id: 10, topic: "הדפסה, משתנים וקלט",
       text: "מה יודפס?",
       code: "int num = 1;\nint newNum = num + 3;\nConsole.WriteLine(newNum);",
       options: ["1", "3", "4", "13"],
       k: "OlECS1NmTUACRxlfNB8PFA==" },
-    { id: 11, topic: "t2",
+    { id: 11, topic: "המרות",
       text: "מה ידפיס הקוד הבא?",
       code: "Console.WriteLine(\"hello\" + 2 + 1);",
       options: ["hello3", "hello21", "hello 2 1", "שגיאה"],
       k: "OlECS1NlTUACRxkTlue0/r7NtvO78PSZYaT9vsCD/7X8sr8Rlu+08L7Ktvu7+hkRHVELDAU4Dj5OThERlui0+L78QbX4sofm21O09b7KtvW7zfSkluW0w0V0tve7+fSqluxDWEmDybXLRfSvltq0/L78tsu7zQPm0KTCvvyDwkxOGA==" },
-    { id: 12, topic: "t2",
+    { id: 12, topic: "המרות",
       text: "מה ידפיס הקוד הבא?",
       code: "Console.WriteLine(2 + 1 + \"hello\");",
       options: ["21hello", "3hello", "hello3", "שגיאה"],
       k: "OlECS1NlTUACRxkTlui0+b7LQVBHVAPm1qT2vsCD8EK7/vSvltK0zb78tvu7+APm3aTHvsmD+EK7zPSlluG0y770tvdMsr/m36T0vsGD9LX6sokfYw4=" },
-    { id: 13, topic: "t2",
+    { id: 13, topic: "המרות",
       text: "מה יודפס?",
       code: "int num = 6;\nConsole.WriteLine(\"ABC\" + num + 1);",
       options: ["ABC7", "ABC61", "ABC6 1", "שגיאה"],
       k: "OlECS1NlTUACRxkTluO0/L7+tvdMsrjm3aT/Sb7Ptvy78APm0KTKvvmD/bX4RRIAYZHj+kmD8LXEsrHm41O0wL7EtvW79gPm1aTzvvuDxbX1sr4Rlu20/r78tve78/SbbVO0/b7Ptv5Msrfm1KTHvvN0tv67zPSZltq0/L78T0AR" },
-    { id: 14, topic: "t2",
+    { id: 14, topic: "הדפסה, משתנים וקלט",
       text: "איזו הכרזה על משתנה היא חוקית?",
       options: ["int x = 5.5;", "double y = 7;", "string s = 'hello';", "char c = \"a\";"],
       k: "OlECS1NlTUACRxkTlue09778tvZMsr0cKB0XSb7ITAYDEEFdJFO0/b7NtvJMsrPm1KT7vvyD/7X0srrm619DvvyD/bX3srwRJRwWCwUxQRtMWAMGelO0/r7BtsW7/A0TPA==" },
-    { id: 15, topic: "t2",
+    { id: 15, topic: "הדפסה, משתנים וקלט",
       text: "מצאו את הבאג בקוד:",
       code: "int num = 5;\nint num = 8;\nConsole.WriteLine(num);",
       options: ["אסור להשים 8 במשתנה מטיפוס int", "הוכרז פעמיים משתנה באותו שם – בשורה השנייה צריך לכתוב ‎num = 8;", "חסרה נקודה-פסיק בסוף השורה הראשונה", "אין באג, יודפס 5"],
       k: "OlECS1NlTUACRxkTlu208r78tvu78/Solu5DvsuD/UK7+/SYltm0yb7AQbXIsoHm3FO0+b7DtshMsrLm3aTyvvp6QbX8srTm6VO08r7OQbXEsoQRlu20wL7Ntvy7/PSsYaTyvvx0tsC7zfSrb1Ee" },
-    { id: 16, topic: "t3",
+    { id: 16, topic: "המרות",
       text: "איזה טיפוס מחזירה הפקודה ()Console.ReadLine?",
       options: ["int", "char", "string", "double"],
       k: "OlECS1NmTUACRxlfNB8PFA==" },
-    { id: 17, topic: "t3",
+    { id: 17, topic: "המרות",
       text: "באיזו שורה נשתמש כדי לקלוט טקסט מהמשתמש ולשמור אותו?",
       options: ["Console.WriteLine();", "string s = Console.ReadLine();", "Console.Write(s);", "string s = \"Console.ReadLine()\";"],
       k: "OlECS1NlTUACRxlfNB8PFA==" },
-    { id: 18, topic: "t3",
+    { id: 18, topic: "הדפסה, משתנים וקלט",
       text: "מצאו את הבאג בקוד:",
       code: "Console.ReadLine(\"Enter number\");",
       options: ["אין באג", "ל-ReadLine לא מעבירים הודעה בסוגריים – יש להדפיס אותה בשורה נפרדת עם WriteLine", "צריך לכתוב Console.Read במקום Console.ReadLine", "לא צריך נקודה-פסיק"],
       k: "OlECS1NlTUACRxlfNB8PFA==" },
-    { id: 19, topic: "t3",
+    { id: 19, topic: "המרות",
       text: "איזו שורה קולטת מהמשתמש מספר שלם?",
       options: ["int age = Console.ReadLine();", "int age = int.Parse(Console.ReadLine());", "string age = int.Parse(Console.ReadLine());", "int age = double.Parse(Console.ReadLine());"],
       k: "OlECS1NlTUACRxlfNB8PFA==" },
-    { id: 20, topic: "t3",
+    { id: 20, topic: "המרות",
       text: "איזו שורה קולטת מהמשתמש מספר עשרוני?",
       options: ["double price = Console.ReadLine();", "double price = int.Parse(Console.ReadLine());", "double price = double.Parse(Console.ReadLine());", "int price = double.Parse(Console.ReadLine());"],
       k: "OlECS1NmTUACRxlfNB8PFA==" },
-    { id: 21, topic: "t3",
+    { id: 21, topic: "המרות",
       text: "מדוע השורה הבאה תגרום לשגיאה?",
       code: "int age = Console.ReadLine();",
       options: ["כי ()Console.ReadLine מחזירה string, ולא ניתן להשים אותה ב-int ללא המרה", "כי חסרים סוגריים אחרי ReadLine", "כי אסור לקרוא למשתנה age", "כי צריך להשתמש ב-Console.WriteLine כדי לקלוט"],
       k: "OlECS1NkTUACRxlfNB8PFA==" },
-    { id: 22, topic: "t3",
+    { id: 22, topic: "המרות",
       text: "המשתמש הקליד 15. מה יודפס?",
       code: "Console.WriteLine(\"Enter your age:\");\nint age = int.Parse(Console.ReadLine());\nConsole.WriteLine(\"next year you will be \" + (age + 1) + \" years old\");",
       options: ["next year you will be 15 years old", "next year you will be 16 years old", "next year you will be 151 years old", "next year you will be age+1 years old"],
       k: "OlECS1NlTUACRxkTlue0yL7BtvC7zfSoluq09EmD/7X3sovm2KT0vvCD/EK7+fSmltq0+EllVEldRfSqlu20yL7wtsq7/PSsYaT/vs2DwbX1RfSlltq0wb79tve7zQ0TPA==" },
-    { id: 23, topic: "t3",
-      text: "בקוד מהשאלה הקודמת הסירו את הסוגריים סביב age + 1. המשתמש הקליד 15. מה יודפס עכשיו?",
+    { id: 23, topic: "המרות",
+      text: "המשתמש הקליד 15. מה יודפס?",
       code: "Console.WriteLine(\"next year you will be \" + age + 1 + \" years old\");",
       options: ["next year you will be 16 years old", "next year you will be 151 years old", "next year you will be 15 1 years old", "שגיאת קומפילציה"],
       k: "OlECS1NlTUACRxkTluK09b7NQbXNsrbm06TLvvCD+LXxRcGx0lO0/URlQbXEsoQRlu20wL7Btsq7zPSZYaTzvv6DybX1RRIEYaT2vveDy7XLsrLm3VNSXFh6Qx8=" },
-    { id: 24, topic: "t4",
+    { id: 24, topic: "הדפסה, משתנים וקלט",
       text: "איזו שורה תגרום לשגיאת קומפילציה?",
       options: ["double d = 5;", "int n = 5.0;", "double d = 5.5;", "int n = 5;"],
       k: "OlECS1NlTUACRxkTlu1OAAcgQbXwSEdeNBEPDEmD9bX4sr3m6aT3Sb7Etve7/fSklu208b7NtshARfShluK09UmD/08IClZTLRZDvvV5CAwYRfSmluq08L7Ftvu7+APm1aT9vsGD9UK7+/SVlua0wb79tshMsoHm3FNLAAcgSExOGA==" },
-    { id: 25, topic: "t4",
+    { id: 25, topic: "char וASCII",
       text: "מה יודפס?",
       code: "double d = 7.9;\nint n = (int)d;\nConsole.WriteLine(n);",
       options: ["7.9", "8", "7", "שגיאה"],
       k: "OlECS1NmTUACRxkTlue0/b7Ktsq78QMZKB0XQEmD9rX5sonm2qTJSb7EtshMsrfm1qT/vs50tva7x/SYltu0/L70tvtMsrbm3aTzSb7KtsC79/StltlDi+nHQVVCXAPm1aT2vs2D+0K7+Q4Gb1Ee" },
-    { id: 26, topic: "t4",
+    { id: 26, topic: "הדפסה, משתנים וקלט",
       text: "חידה – עקבו אחרי הערכים שורה אחר שורה. מה יודפס?",
       code: "int a = 1;\nint b = 2;\nint c = 3;\na = b;\nb = c;\nc = a + b;\nConsole.WriteLine(c);",
       options: ["3", "4", "5", "6"],
       k: "OlECS1NmTUACRxkTlu20y77ztvNWRUIMc19DvvmD9rXERfSqlulDC1RnTUK78PStluK0yL7BtsFMBgMMYUFIWklpQVdCR14=" },
-    { id: 27, topic: "t4",
+    { id: 27, topic: "char וASCII",
       text: "מה יודפס?",
       code: "char c = 'A';\nConsole.WriteLine((int)c);",
       options: ["A", "65", "97", "0"],
-      k: "OlECS1NlTUACRxkTZjJESb7Atve79QMHdFO0+L7MtvO7+fSbYTIwKiAdT0JEQkIWYaT3vs6D+bXMsrcRlue08L7EQVtbSwoTPA==" },
-    { id: 28, topic: "t4",
+      k: "OlECS1NlTUACRxkTAFRDvv2D9LX8RRUEYaTyvvGD8LXwsokRACAgICB6QUpLBAQRlue0zr7MtsK78QPm1aT6vvl0WFVCTAFM" },
+    { id: 28, topic: "char וASCII",
       text: "מה יודפס?",
       code: "int n = 66;\nchar c = (char)n;\nConsole.WriteLine(c);",
       options: ["66", "A", "B", "b"],
       k: "OlECS1NmTUACRxkTd0ZDvv2D9LX8RQRwZl9DvvyD/bX3srwRd0VDvv2D9LX8RQRzZl1BFA==" },
-    { id: 29, topic: "t4",
+    { id: 29, topic: "char וASCII",
       text: "מה יודפס?",
       code: "char c = '7';\nConsole.WriteLine(c - '0');",
-      options: ["7", "55", "48", "'7'"],
-      k: "OlECS1NkTUACRxkTZkRESb7Atve79QPm1aTJvvx0tsu7x/SZlui0/ElhVE5MsrYcZkNESb7Atve79QMFeV1Dvv2D9rX1soLm1KTLSb7KtvW78/SolttDvvmDy0K78fSQlte0wb7AQbXOsoXm36T3U0lhVE9YXQMMYURNSb7CtvdMsrfm0qTLvvN0tva7xPSpltO0+r78tvq7/PSbYaT/vv2D/7X1sosRltm0/ESDwLXIsovm1VO09b7KtsO7wfSZb1Ee" },
-    { id: 30, topic: "t4",
+      options: ["7", "55", "48", "7'"],
+      k: "OlECS1NkTUACRxkTdlRDvv2D9LX8RfSlltm0/EmDyLXOsovm2qT2SVxhTUK78A4WcVRDvv2D9LX8RRcJb1O0/b7Dtvu7xPSklttDvveD9rX6srrm6VO0+b7+QbX4soLm5aTLvv10tsC7w/SvludZSVxhTFZURR4Rdl1Dvv+D9EK78fSiltu080mD9bXNsrvm4aTwvsGD+bX1sokRlu+0/b7Ktvu7zQPm66T2RL71tsa7zfSlYaT/vveDwLXIsosfYw4=" },
+    { id: 30, topic: "char וASCII",
       text: "האותיות הגדולות באנגלית שמורות בטבלת ASCII ברצף. מה יודפס?",
       code: "char letter = 'D';\nint position = letter - 'A' + 1;\nConsole.WriteLine(\"position \" + position);",
       options: ["position 3", "position 4", "position 68", "position D"],
-      k: "OlECS1NlTUACRxkTZjdEVF9sTUJLJAQMd0ZPSb7Btv67/vSuYUVbRF9hSlNMWAMFb1Ee" }
+      k: "OlECS1NlTUACRxkTBVReX1F4QUUtQh4HdF9DvvyD/bX3srwRd0tOX1x/UEJRRRcfYw4=" }
   ]
 });
 </script>
 
-<!-- ============================================================
-     תבנית להוספת נושא חידון נוסף.
-     מוחקים את שורת הפתיחה ואת שורת הסיום של ההערה הזאת,
-     ואז ממלאים id, name, topics ו-questions.
-     ============================================================
 <script>
+/* יחידה 2 – פעולות מתמטיות – 30 שאלות */
 registerQuiz({
   id: "unit2",
-  name: "יחידה 2 – תנאים",
+  name: "יחידה 2 – פעולות מתמטיות",
   topics: [
-    { id: "c1", name: "משפט if" },
-    { id: "c2", name: "אופרטורים לוגיים" }
+    { id: "אופרטורים", name: "אופרטורים" },
+    { id: "מחלקה Math", name: "מחלקה Math" },
+    { id: "Random", name: "Random" }
   ],
   questions: [
-    { id: 1, topic: "c1",
+    { id: 1, topic: "אופרטורים",
+      text: "איזה אופרטור מבצע כפל בשפת C#?",
+      options: ["x", "*", "^", "×"],
+      k: "OlECS1NlTUACRxkTltK08L7Ktv1Msrfm2qTHvvV0tvO7zPSVludDvv2D9LX8RfSqlua08r7Ftvu7zwMbb1Ee" },
+    { id: 2, topic: "אופרטורים",
       text: "מה יודפס?",
-      code: "int x = 5;\nif (x > 3)\n    Console.WriteLine(\"big\");",
-      options: ["big", "5", "שום דבר", "שגיאה"],
-      answer: 0,
-      note: "התנאי מתקיים ולכן השורה מודפסת." }
+      code: "int x = 9, y = 4;\nConsole.WriteLine(x + y);",
+      options: ["5", "94", "13", "x + y"],
+      k: "OlECS1NmTUACRxkTluK08L7LQbXFsoPm2FO09771tsa7zfSolu5Dvv2D8bX5sofm6aT7vvyDyUJHRfSvluK0z772QbX7srrm0KT2vsF6Qx8=" },
+    { id: 3, topic: "אופרטורים",
+      text: "מה מחשב האופרטור % (מודולו)?",
+      options: ["אחוזים מתוך מספר", "את השארית של החלוקה", "חלוקה עם תוצאה עשרונית", "עיגול לשלם הקרוב"],
+      k: "OlECS1NlTUACRxkTlu20/L7Htve7+fSkYaT9vv6D97X1sosRluO0w0mD9bXFsrPm6aT6vsNuQVNfRQYRc1O0wL7Btve78QMAb1Ee" },
+    { id: 4, topic: "אופרטורים",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(10 % 2);",
+      options: ["0", "5", "2", "1"],
+      k: "OlECS1NkTUACRxkTcENDvveDy7X7sr/m5lO0+ERmQbX9sr/m2FO0wL7Etsq7/PSbb1Ee" },
+    { id: 5, topic: "אופרטורים",
+      text: "מה עושה הפקודה הבאה?",
+      code: "x++;",
+      options: ["מגדילה את x ב-1", "מכפילה את x ב-2", "מאפסת את x", "מדפיסה את x"],
+      k: "OlECS1NkTUACRxkTlue0zb7ztve79vSlYaTKvs6D9LXwsrcRlu+08r7+tvu79PSlYQtDVEksQUlMVA0RluK0+b7Btsa7+gPm0qT2vveD9UK78fSVltS0/L7HtvZMHQ4cYaT9vs6D+bX1soPm1VO0+ERlT0AR" },
+    { id: 6, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "int n = Math.Abs(-20);\nConsole.WriteLine(n);",
+      options: ["20", "-20", "0", "שגיאה"],
+      k: "OlECS1NkTUACRxkTABEQSb7KtvW78/Soltu0/UmDw7XEsrkRlu20/L7Dtv67/QPTweBDvv2D/7XEsrTm5lO090RkTUK7z/Svluq0+kmD9rX1srbm0KT6R0sp" },
+    { id: 7, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(Math.Pow(2, 3));",
+      options: ["6", "9", "5", "8"],
+      k: "OlECS1NnTUACRxkTERwUSb7KtvW7zPSgltlDvv6D97XLsrcLYUFDvviD9rX6soTm61NQSVR0WUxOGA==" },
+    { id: 8, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(Math.Sqrt(16));",
+      options: ["4", "8", "256", "16"],
+      k: "OlECS1NkTUACRxkTEgIRHUmD/7X7sorm0KTJSb79tve7zfSYYaTLvvCD8LX5soHm2F1BFA==" },
+    { id: 9, topic: "אופרטורים",
+      text: "מה יודפס?",
+      code: "int x = 3;\nx = x + 1;\nx++;\nConsole.WriteLine(x);",
+      options: ["3", "4", "5", "6"],
+      k: "OlECS1NmTUACRxkTclO0/L72tve79gMAYaT1vv10VU5Msrbm0aT1SUJ/GUK7+/SkltK08L73QbXOsrbm0lNSR0sp" },
+    { id: 10, topic: "אופרטורים",
+      text: "איזה כתיב מקוצר שקול לשורה הבאה?",
+      code: "y = y + 9;",
+      options: ["y =+ 9;", "y += 9;", "y++ 9;", "y = 9;"],
+      k: "OlECS1NlTUACRxkTlue0+b7Btsa7zfSplua0wUmD9bXysorm1KT/vvh0tsu7+QPm1qT6vviD9LXERfSklue0wL7KtvZMsr3m1KTCvvCDwkJVRfStltG0wb7OQbXFsrjm0KTLSb70tvy7w/ShYaTyvveDyLXGsoPm1V1BFA==" },
+    { id: 11, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(Math.Min(67, 2));",
+      options: ["2", "67", "69", "65"],
+      k: "OlECS1NkTUACRxkTDBoNSb7KtvW78/Soltu0/UmD8bXGRfSlltS08b7LQbXysrLm2KT8Sb79tsK7/APm1aT9vsiDxbXEsrrm3F1BFA==" },
+    { id: 12, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(Math.Max(34, 36));",
+      options: ["36", "34", "70", "2"],
+      k: "OlECS1NkTUACRxkTDBIbSb7KtvW78/Soltu0/UmD8bXGRfSlluG0+r7Btv5Msr3m0KT6vvZ0tsu7xfSoYaT3vveDwLXIsovm2KT+R0sp" },
+    { id: 13, topic: "Random",
+      text: "איזו שורה יוצרת נכון אובייקט להגרלת מספרים אקראיים?",
+      options: ["Random r = new Random();", "Random r = Random();", "new Random r;", "int r = new Random();"],
+      k: "OlECS1NkTUACRxkTluq0/L7ytsq7/PSsYaTzvvyD8LX1srrm5qT7Sb7DtvG7zAPm0KTBvv+DybXGRfSllu208L7ItvZMC0ZGb1Ee" },
+    { id: 14, topic: "Random",
+      text: "אילו ערכים יכולים לצאת מהשורה הבאה?",
+      code: "int num = r.Next(5);",
+      options: ["5 בלבד", "1 עד 5", "0 עד 4", "0 עד 5"],
+      k: "OlECS1NmTUACRxkTltG09EmDxbXEsr3m2aTLSb7EtvW79gPm1aT3vvuDybXwsrcRlu20w77Dtvu7+fSlYaT9RFl4QbX5srfm36TCvs2DyUK7x/SXlu20/EmD/bX8RfSqlu+0/L7IT0AR" },
+    { id: 15, topic: "Random",
+      text: "מהו טווח המספרים שיכולים לצאת?",
+      code: "int num = r.Next(1, 7);",
+      options: ["1 עד 7", "0 עד 7", "2 עד 6", "1 עד 6"],
+      k: "OlECS1NnTUACRxkTlue09771tsa7zQPm1aTLvvmDyLX5srwRlui09b7Btv5Msrbm1aTKvsmD+EK7+fShYZHj+kmD8LX/srrm1KTESb7Ptvy78APm5qT2vviD+LX1srcfYw4=" },
+    { id: 16, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(Math.Round(1.234));",
+      options: ["1.2", "1", "2", "1.23"],
+      k: "OlECS1NlTUACRxkTExwWBw10tvy7x/Sjlu+0w0mD/bXFsr/m3FO0/b7ztsq78PSgbVO0/ERlT1BfUQPm5qTLvvyD8EK7/PSkltm0wUmD/U9dSwFM" },
+    { id: 17, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(Math.Floor(142.789));",
+      options: ["143", "142.7", "142.79", "142"],
+      k: "OlECS1NnTUACRxkTBx8MBht0tvy7x/Sjlu+0w0mDy7Xysrrm0lO09b7Ktvq78Q8RluG09EmD+rXFsrfm1qT/vs50tva7x/SYltu0/L70tvtMsrHm0qT2vvV6Qx8=" },
+    { id: 18, topic: "אופרטורים",
+      text: "מה יודפס?",
+      code: "int x = 9, y = 4;\nConsole.WriteLine(x / y);",
+      options: ["2.25", "3", "2", "2.5"],
+      k: "OlECS1NmTUACRxkTluS09b7BtsW78QPm0KT6vvZ0tsu7xfSoYaT9vsCDy7XMsrrm3FO0wL7Itvy7/PSsYaT3vvCD8UK78vStlua0zr7AQbXFsr/m36T3SYvU8kK78fSmlu+0zkmD9bXOsorm6aT2vsmD+EK7xfSnltu0zkd2HA==" },
+    { id: 19, topic: "אופרטורים",
+      text: "מה יודפס?",
+      code: "double z = 9.5;\nint y = 4;\nConsole.WriteLine(z / y);",
+      options: ["2", "2.5", "שגיאה", "2.375"],
+      k: "OlECS1NnTUACRxkTlui0wL7EtvW79gPm1aT9vsiDxbXEsrrm3FO0y779tsq78PSRlupDi+nHQbX4sonm1KTFvvmD9UK7x/SYltu0/L70tvu7zw0TPA==" },
+    { id: 20, topic: "אופרטורים",
+      text: "איזה תנאי בודק אם המספר num הוא זוגי?",
+      options: ["num % 2 == 0", "num / 2 == 0", "num % 2 == 1", "num * 2 == 0"],
+      k: "OlECS1NkTUACRxkTlu20yL7wtspMsrXm1KTxvvB0tvy7z/Smlu+0zkmD8E9eRfStlu+0+UmDyLX8sovm2KTJR0sp" },
+    { id: 21, topic: "אופרטורים",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(567 % 10);",
+      options: ["56", "5", "0", "7"],
+      k: "OlECS1NnTUACRxkTltq0+b78tvu7zwPm0KT0vvWD9LXLsrcRluJOWFl0tva7/PShYaTJvveD+LX/RfSQlte0wb7+QbX4srPm1qTwvvyDy0xOGA==" },
+    { id: 22, topic: "אופרטורים",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(345 / 10);",
+      options: ["34.5", "34", "35", "5"],
+      k: "OlECS1NlTUACRxkTluS09b7BtsW78QPm6KT/vveD9UK79A4AcVO0977BtvW7wvSbYaTzvsN0tsO7wfSZltlDvv2D8bX7srDm1KTJR0sp" },
+    { id: 23, topic: "אופרטורים",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(345 % 100);",
+      options: ["3", "3.45", "45", "345"],
+      k: "OlECS1NmTUACRxkTltq0+b78tvu7zwPm0KT0vvWD9LXLsrcRluJOWFlkQbX4srrm0VO0wL7+tvtMsrfm4KTHvsGD9LXGRfSlluO0/r78tve7xfSkltlNSxQ=" },
+    { id: 24, topic: "אופרטורים",
+      text: "num הוא מספר תלת-ספרתי. איזה ביטוי מחזיר את ספרת העשרות שלו?",
+      options: ["num % 10", "(num / 10) % 10", "num / 10", "num % 100"],
+      k: "OlECS1NlTUACRxkTltS0/L7Htv9Msr3m1KT0vs6D+LXxRfShltlDvsiDxbXEsokRlue0+b7DtvG78PSbYaTyvv6D/bX5soTm1VO0+ERlUU5Msrbm0aT1Sb7Itve7wvSmluq09EmD8bXGRfSlltq0+b78tvu7zwPm0F5SWUd2HA==" },
+    { id: 25, topic: "מחלקה Math",
+      text: "מדוע השורה הבאה גורמת לשגיאה?",
+      code: "int x = Math.Pow(2, 3);",
+      options: ["כי הפעולה Pow לא קיימת", "כי צריך שלושה פרמטרים", "כי Pow מחזירה double ואי אפשר לשמור אותה במשתנה int", "כי 2 ו-3 הם מספרים שלמים"],
+      k: "OlECS1NmTUACRxkTERwUSb7KtvW78/Soltu0/UmDy7Xysrrm0lO0y778tvhMsr3m4KT2vvt0BQ0ZB09UbVO0/L7Itvm7+gPm56TLvvCD+0K7+fSYlu20/L78QbX8srbm66T2Sb7Ftvy7zPSbltO0/UkwDhcOCUYRluO0/EmD/bX4sr3m2KTLSb7Etve7z/SkYaTyvsuD97XEsokRaRoNHUB6Qx8=" },
+    { id: 26, topic: "אופרטורים",
+      text: "מה יודפס?",
+      code: "double res = 7 / 2;\nConsole.WriteLine(res);",
+      options: ["3.5", "4", "שגיאה", "3"],
+      k: "OlECS1NnTUACRxkTlue0/r7Itve7wvSlYaT9vsOD8LXKsoHm61O0+L7Ntv1Msorm4aT6Sb7KtsO7wfSZluq09EmDyLXwsr3m2KT+Sb72tve79gPm3aTHvsmD+EK78fSlltq0977ATUK78PStlui09kmD9bXGsrbm56Tzvv10UkxMsrPm3FO0yb7Ptsi78PSgYURNWUmD8LXysoTm1KT+SV50tsK7wvSglu9DWkdhT0AR" },
+    { id: 27, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(Math.Round(2.7) - Math.Floor(2.7));",
+      options: ["1", "0", "0.7", "5"],
+      k: "OlECS1NkTUACRxkTExwWBw10tvy7x/Sjlu+0w0mD/U9fSQN3LRwMG0mD/7XOsrHm3aTJSb7ITFBARfSklue0/b7wtsq7zAPm1aT2vvl0UExOGA==" },
+    { id: 28, topic: "Random",
+      text: "איזו שורה מגרילה מספר שלם בין 10 ל-20, כולל 20?",
+      options: ["r.Next(10, 20);", "r.Next(20);", "r.Next(11, 20);", "r.Next(10, 21);"],
+      k: "OlECS1NnTUACRxkTlue0+77Ftve7+QPm1aTBvvWD+LX5srwRluO08L70tvdMsrjm3aT2vvV4QbX5sr/m2qT8Sb7PtvG7/APm3aT4vvWD9LXwRfShltlDW1l0tvm78PSbluK08L7JQVBdSwFM" },
+    { id: 29, topic: "מחלקה Math",
+      text: "מה יודפס?",
+      code: "Console.WriteLine(Math.Sqrt(Math.Pow(3, 2) + Math.Pow(4, 2)));",
+      options: ["7", "5", "25", "12"],
+      k: "OlECS1NlTUACRxkTlu20/r79tvO7/PSsYaT9vviDxbXMsrrm3FO0/b7Dtve7w/Sle1NaSb7BtsC78PSiYUJVSb7CtvZMVxYdYaT2vv2DyLX5sovm6FO0wL7ItvdMsrfm1KTzSVx6Qx8=" },
+    { id: 30, topic: "מחלקה Math",
+      text: "חידה – עקבו אחרי הערכים שורה אחר שורה. מה יודפס?",
+      code: "int n = Math.Abs(-7);\nn = n % 4;\nn++;\nConsole.WriteLine(Math.Sqrt(n));",
+      options: ["1", "3", "2", "2.64"],
+      k: "OlECS1NmTUACRxkTlue0y778tvhMsrfm36T2vv6D/bX0RfSllua0+UljTUK78fSYluO0wb7NtshMsorm3aT2Sb7FtvW7+fSkltS0/UmD8E9YRfSlluq0+UlnTUK79fSmltu08EmD9bX4srHm0qT/vv10tvNBVAPm36TJvs6D8LXwRRcdYaT2vv2DyLX5sovm6FO0/b78tvu79PSkltG08EmDyLXwsrYRlue0/L7EQVBCR14=" }
   ]
 });
 </script>
-     ============================================================ -->
+<!-- BANKS-END -->
 <!-- ספריית QR: מקור ראשי, ואם נכשל – מקור גיבוי -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"
         onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js';document.head.appendChild(s);"></script>
@@ -773,8 +939,6 @@ if(!IS_PLAYER){ (function board(){
   function showJoin(){
     const url = location.origin + location.pathname + '?r=' + S.code;
     $('#codeBig').textContent = S.code;
-    $('#codePillVal').textContent = S.code;
-    $('#codePill').classList.remove('hidden');
     $('#joinUrl').textContent = url.replace(/^https?:\/\//,'');
     if(location.protocol === 'file:') $('#fileWarn').classList.remove('hidden');
     $('#miniCode').textContent = S.code;
@@ -870,6 +1034,12 @@ if(!IS_PLAYER){ (function board(){
   const poolOf = () => S.set.questions.filter(q => S.topicSel.has(q.topic));
 
   function paintSetup(){
+    if(!QUIZ_SETS.length){                                   // אין מאגר שאלות בקובץ
+      $('#counts').innerHTML = '';
+      $('#breakdown').textContent = 'לא נמצאו שאלות בקובץ. בנו אותו מחדש מהגיליון עם builder.html.';
+      $('#toLobby').disabled = true;
+      return;
+    }
     if(!S.set) S.set = QUIZ_SETS[0];
     const set = S.set;
 
@@ -877,7 +1047,9 @@ if(!IS_PLAYER){ (function board(){
     $('#setWrap').classList.toggle('hidden', QUIZ_SETS.length < 2);
     const sr = $('#setRow'); sr.innerHTML = '';
     QUIZ_SETS.forEach(qs=>{
-      const b = el('button','choice', qs.name);
+      const b = el('button','subject');
+      b.appendChild(el('div','t', qs.name));
+      b.appendChild(el('div','m', qs.questions.length + ' שאלות · ' + qs.topics.length + ' נושאים'));
       b.setAttribute('aria-pressed', String(qs === set));
       b.onclick = ()=>{ S.set = qs; S.topicSel = null; paintSetup(); };
       sr.appendChild(b);
@@ -891,7 +1063,8 @@ if(!IS_PLAYER){ (function board(){
     const tr = $('#topicRow'); tr.innerHTML = '';
     withQs.forEach(t=>{
       const n = set.questions.filter(q=>q.topic===t.id).length;
-      const b = el('button','choice small');
+      const b = el('button','topicchip');
+      b.appendChild(el('span','box','✓'));
       b.append(t.name + ' ');
       b.appendChild(el('em', null, String(n)));
       b.setAttribute('aria-pressed', String(S.topicSel.has(t.id)));
@@ -1057,13 +1230,39 @@ if(!IS_PLAYER){ (function board(){
   /* ---------- ניווט בין מסכים ---------- */
   function show(id){
     ['lobbyView','setupView','playView','finalView'].forEach(v => $('#'+v).classList.toggle('hidden', v !== id));
-    $('#joinMini').classList.toggle('hidden', id === 'lobbyView' || !S.code);   // בלובי ה-QR הגדול ממילא מוצג
+    /* ה-QR הקטן מיותר בדף הבית (אין עדיין חדר) ובלובי (מוצג שם בגדול) */
+    $('#joinMini').classList.toggle('hidden', id === 'lobbyView' || id === 'setupView' || !S.code);
+    $('#homeBtn').classList.toggle('hidden', id === 'setupView');
+    $('#countPill').classList.toggle('hidden', id === 'setupView');
   }
-  $('#toSetup').onclick  = ()=>{ show('setupView'); paintSetup(); };
-  $('#backLobby').onclick= ()=> show('lobbyView');
+
+  /* דף הבית -> לובי: כאן מוצג ה-QR והתלמידים מצטרפים */
+  $('#toLobby').onclick = ()=>{
+    const pool = poolOf();
+    if(!pool.length) return;
+    const list = pickQuestions(pool, S.count);
+    $('#lobbyLede').textContent = S.set.name + ' · ' + list.length + ' שאלות · ' +
+      breakdownOf(S.set, list).length + ' נושאים. כשכולם ברשימה – מתחילים.';
+    show('lobbyView');
+  };
+  $('#backSetup').onclick = ()=>{ show('setupView'); paintSetup(); };
+
+  /* חזרה לדף הבית מכל מסך. החדר והתלמידים נשארים מחוברים. */
+  function goHome(){
+    if(S.phase === 'asking' || S.phase === 'revealed'){
+      if(!confirm('החידון הנוכחי יופסק. לחזור לדף הבית?')) return;
+    }
+    S.phase = 'lobby'; S.qi = -1; S.list = [];
+    all({t:'waiting'});
+    $('#setName').textContent = 'חידון אינטראקטיבי לכיתה';
+    show('setupView'); paintSetup();
+  }
+  $('#homeBtn').onclick = goHome;
+
   $('#startBtn').onclick = ()=>{
     S.list = pickQuestions(poolOf(), S.count);
     if(!S.list.length) return;
+    S.players.forEach(p=>{ p.score = 0; p.choice = null; p.gain = 0; p.secs = 0; });   // חידון חדש – ניקוד מאופס
     $('#setName').textContent = S.set.name;
     S.qi = 0; show('playView'); ask();
     window.onbeforeunload = e => { e.preventDefault(); return ''; };
@@ -1077,7 +1276,7 @@ if(!IS_PLAYER){ (function board(){
   $('#skipBtn').onclick = ()=>{
     if(S.qi + 1 < S.list.length){ S.qi++; ask(); } else finish();
   };
-  $('#againBtn').onclick = ()=>{ window.onbeforeunload = null; location.reload(); };
+  $('#againBtn').onclick = goHome;
   $('#fsBtn').onclick = toggleFS;
   function toggleFS(){ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
 
@@ -1089,7 +1288,7 @@ if(!IS_PLAYER){ (function board(){
     if(e.key === 'f' || e.key === 'F') toggleFS();
   });
 
-  host(); paintLobby();
+  host(); paintLobby(); show('setupView'); paintSetup();
 })(); }
 
 /* ================================================================
