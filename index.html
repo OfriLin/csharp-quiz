@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#EDF1F5">
+<title>חידון כיתתי – יחידה 1: הדפסה, משתנים וקלט</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700;800&family=Heebo:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --paper:#EDF1F5;        /* רקע – תכלת-אפור קריר, נוח לעין על מקרן */
+  --card:#FFFFFF;
+  --ink:#1C2A35;
+  --muted:#657785;
+  --edge:#D7E0E8;
+  --brand:#42549B;        /* אינדיגו רגוע – פעולות וכותרות */
+  --brand-soft:#E4E8F6;
+
+  --opt-a:#AECBE8;
+  --opt-b:#F4CBA6;
+  --opt-c:#AEDCC3;
+  --opt-d:#CDBFE9;
+
+  --ok:#1F7A55;  --ok-bg:#CFEBDC;
+  --no:#A34640;  --no-bg:#F6D8D4;
+
+  --shadow:0 1px 2px rgba(28,42,53,.06), 0 8px 24px rgba(28,42,53,.07);
+  --r:18px;
+
+  --display:'Rubik',system-ui,sans-serif;
+  --body:'Heebo',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--body); font-size:16px; line-height:1.5;
+  -webkit-text-size-adjust:100%;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+h1,h2,h3,.display{font-family:var(--display); font-weight:700; letter-spacing:-.01em; margin:0}
+button{font-family:inherit; font-size:inherit; color:inherit; cursor:pointer; border:0; background:none}
+:focus-visible{outline:3px solid var(--brand); outline-offset:3px; border-radius:6px}
+
+.hidden{display:none !important}
+.ltr{direction:ltr; text-align:left; unicode-bidi:isolate}
+.mono{font-family:var(--mono)}
+
+/* ============================================================
+   SHARED
+   ============================================================ */
+.wrap{max-width:1400px; margin:0 auto; padding:20px clamp(14px,3vw,32px) 32px}
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  background:var(--brand); color:#fff; font-family:var(--display); font-weight:600;
+  padding:14px 26px; border-radius:999px; box-shadow:var(--shadow);
+  transition:transform .12s ease, filter .12s ease;
+}
+.btn:hover{filter:brightness(1.07)}
+.btn:active{transform:translateY(1px)}
+.btn[disabled]{opacity:.45; cursor:not-allowed; filter:none}
+.btn.ghost{background:var(--card); color:var(--brand); border:1.5px solid var(--edge)}
+.btn.lg{padding:18px 40px; font-size:clamp(18px,2.2vw,24px)}
+
+.pill{
+  display:inline-flex; align-items:center; gap:8px; background:var(--card);
+  border:1px solid var(--edge); border-radius:999px; padding:7px 15px;
+  font-size:14px; font-weight:500; color:var(--muted);
+}
+.dot{width:8px; height:8px; border-radius:50%; background:#C7CFD6; flex:none}
+.dot.on{background:#3FA06B; box-shadow:0 0 0 4px rgba(63,160,107,.16)}
+.dot.err{background:#C1554D; box-shadow:0 0 0 4px rgba(193,85,77,.16)}
+
+/* --- Signature element: חלון קונסולה --- */
+.console{
+  background:#1D2733; border-radius:14px; overflow:hidden;
+  box-shadow:0 10px 30px rgba(20,32,44,.28); direction:ltr; text-align:left;
+}
+.console-bar{
+  display:flex; align-items:center; gap:8px; padding:9px 14px;
+  background:#16202B; border-bottom:1px solid #2A3644;
+}
+.console-bar i{width:10px; height:10px; border-radius:50%; background:#3B4956; display:block}
+.console-bar span{
+  margin-inline-start:8px; font-family:var(--mono); font-size:12px; color:#7E93A6; letter-spacing:.04em;
+}
+.console pre{
+  margin:0; padding:clamp(14px,1.6vw,22px) clamp(16px,2vw,26px);
+  font-family:var(--mono); font-size:var(--code-size,clamp(15px,1.7vw,26px));
+  line-height:1.62; color:#DCE6F0; white-space:pre-wrap; word-break:break-word; tab-size:2;
+}
+.k{color:#8FC1F2} .s{color:#F0BE86} .n{color:#B9E4A8} .f{color:#C7B4EE}
+.caret{display:inline-block; width:.55em; height:1.05em; background:#7FE0B0; vertical-align:-.18em; animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* ============================================================
+   BOARD (מסך מורה / מקרן)
+   ============================================================ */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  padding:14px clamp(14px,3vw,32px); border-bottom:1px solid var(--edge); background:var(--card);
+}
+.brandmark{display:flex; align-items:baseline; gap:12px; font-family:var(--display)}
+.brandmark b{font-size:clamp(17px,2vw,22px); font-weight:800}
+.brandmark small{color:var(--muted); font-weight:500; font-size:14px}
+.topbar .right{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+
+/* --- לובי --- */
+.lobby{display:grid; grid-template-columns:minmax(300px,420px) 1fr; gap:clamp(20px,3vw,44px); align-items:start}
+@media (max-width:900px){.lobby{grid-template-columns:1fr}}
+.joincard{background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); padding:26px; text-align:center}
+.joincard h2{font-size:20px; margin-bottom:4px}
+.joincard p{color:var(--muted); margin:6px 0 18px; font-size:15px}
+#qrbox{
+  width:min(320px,72vw); aspect-ratio:1; margin:0 auto; background:#fff; border-radius:12px;
+  border:1px solid var(--edge); display:flex; align-items:center; justify-content:center; padding:10px;
+}
+#qrbox canvas,#qrbox img{width:100%; height:100%; image-rendering:pixelated}
+.codeplate{
+  margin-top:18px; font-family:var(--mono); font-weight:700;
+  font-size:clamp(30px,4vw,44px); letter-spacing:.16em; color:var(--brand);
+  background:var(--brand-soft); border-radius:12px; padding:10px 8px; direction:ltr;
+}
+.joinurl{
+  margin-top:10px; font-family:var(--mono); font-size:13px; color:var(--muted);
+  direction:ltr; word-break:break-all;
+}
+.lobby-side h2{font-size:clamp(26px,3.6vw,42px); line-height:1.15}
+.lobby-side .lede{color:var(--muted); margin:10px 0 22px; font-size:clamp(15px,1.6vw,19px); max-width:52ch}
+.players{display:flex; flex-wrap:wrap; gap:10px; margin-top:18px}
+.chip{
+  background:var(--card); border:1px solid var(--edge); border-radius:999px;
+  padding:9px 18px; font-weight:500; box-shadow:var(--shadow);
+  animation:pop .28s cubic-bezier(.2,.9,.3,1.3);
+}
+.chip.off{opacity:.45}
+@keyframes pop{from{transform:scale(.8); opacity:0}}
+.counter{font-family:var(--display); font-weight:800; font-size:clamp(40px,7vw,84px); line-height:1; color:var(--brand)}
+.counter small{font-family:var(--body); font-weight:500; font-size:16px; color:var(--muted); margin-inline-start:10px}
+
+/* --- הגדרת חידון --- */
+.setup{max-width:900px; margin:0 auto; text-align:center}
+.counts{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:26px 0 18px}
+.count{
+  min-width:104px; padding:20px 10px; background:var(--card); border:2px solid var(--edge);
+  border-radius:16px; font-family:var(--display); font-weight:800; font-size:30px; box-shadow:var(--shadow);
+  transition:border-color .15s, transform .15s;
+}
+.count:hover{transform:translateY(-2px)}
+.count[aria-pressed="true"]{border-color:var(--brand); background:var(--brand-soft); color:var(--brand)}
+.count em{display:block; font-family:var(--body); font-size:13px; font-weight:500; color:var(--muted); font-style:normal; margin-top:4px}
+.breakdown{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-bottom:26px}
+.breakdown span{background:var(--card); border:1px solid var(--edge); border-radius:999px; padding:7px 14px; font-size:14px; color:var(--muted)}
+.breakdown b{color:var(--ink)}
+
+/* --- שאלה --- */
+.qhead{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; flex-wrap:wrap}
+.steps{display:flex; gap:4px; flex-wrap:wrap; max-width:60%}
+.steps i{width:16px; height:6px; border-radius:3px; background:var(--edge); display:block}
+.steps i.done{background:#A9BBD3}
+.steps i.now{background:var(--brand); width:30px}
+.qtext{
+  font-family:var(--display); font-weight:700; font-size:clamp(22px,3.2vw,42px);
+  line-height:1.25; margin-bottom:16px;
+}
+.qtopic{font-family:var(--body); font-size:14px; font-weight:500; color:var(--muted)}
+.opts{display:grid; grid-template-columns:1fr 1fr; gap:clamp(10px,1.4vw,18px); margin-top:clamp(14px,2vw,24px)}
+@media (max-width:760px){.opts{grid-template-columns:1fr}}
+.opt{
+  position:relative; display:flex; align-items:center; gap:14px; text-align:start;
+  background:var(--card); border-radius:16px; padding:clamp(14px,1.6vw,22px);
+  box-shadow:var(--shadow); border:3px solid transparent; overflow:hidden;
+  animation:rise .32s cubic-bezier(.2,.9,.3,1.2) both;
+}
+@keyframes rise{from{opacity:0; transform:translateY(10px)}}
+.opt .letter{
+  flex:none; width:clamp(38px,3.4vw,52px); height:clamp(38px,3.4vw,52px); border-radius:12px;
+  display:grid; place-items:center; font-family:var(--display); font-weight:800;
+  font-size:clamp(18px,1.9vw,26px); color:#22303C;
+}
+.opt:nth-child(1) .letter{background:var(--opt-a)}
+.opt:nth-child(2) .letter{background:var(--opt-b)}
+.opt:nth-child(3) .letter{background:var(--opt-c)}
+.opt:nth-child(4) .letter{background:var(--opt-d)}
+.opt .body{font-size:clamp(16px,1.9vw,26px); font-weight:500; flex:1; min-width:0; word-break:break-word}
+.opt .body.ltr{font-family:var(--mono); font-size:clamp(14px,1.7vw,23px)}
+.opt .tally{
+  flex:none; font-family:var(--mono); font-size:15px; color:var(--muted); opacity:0; transition:opacity .3s;
+}
+.opt .bar{position:absolute; inset-block-end:0; inset-inline-start:0; height:5px; width:0; background:var(--brand); transition:width .55s ease}
+.revealed .opt .tally{opacity:1}
+.opt.correct{border-color:var(--ok); background:var(--ok-bg); animation:flash .5s ease}
+.opt.correct .tally{color:var(--ok)}
+.opt.correct .bar{background:var(--ok)}
+@keyframes flash{0%{transform:scale(1)}45%{transform:scale(1.025)}100%{transform:scale(1)}}
+.opt.dim{opacity:.55}
+
+.footbar{
+  position:sticky; bottom:0; margin-top:22px; padding:14px 0 6px;
+  display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  background:linear-gradient(to top,var(--paper) 72%,transparent);
+}
+.answered{font-family:var(--display); font-weight:700; font-size:clamp(16px,1.8vw,22px)}
+.answered small{font-family:var(--body); font-weight:400; color:var(--muted); font-size:14px; margin-inline-start:8px}
+.note{
+  background:var(--brand-soft); border-inline-start:5px solid var(--brand); border-radius:10px;
+  padding:12px 16px; margin-top:16px; font-size:clamp(14px,1.5vw,19px); color:#2C3A63;
+}
+.top3{display:flex; gap:12px; flex-wrap:wrap; margin-top:16px}
+.top3 .row{
+  display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--edge);
+  border-radius:14px; padding:10px 18px; box-shadow:var(--shadow); font-size:clamp(15px,1.7vw,21px);
+}
+.top3 .rank{font-family:var(--display); font-weight:800; color:var(--brand); font-size:1.15em}
+.top3 .pts{font-family:var(--mono); color:var(--muted); font-size:.9em}
+.top3 .gain{color:var(--ok); font-size:.8em; font-family:var(--mono)}
+
+/* --- סיום --- */
+.podium{display:flex; align-items:flex-end; justify-content:center; gap:clamp(10px,2vw,26px); margin:30px 0}
+.stand{display:flex; flex-direction:column; justify-content:flex-end; gap:4px; background:var(--card); border-radius:18px 18px 0 0; box-shadow:var(--shadow); padding:18px 14px 22px; text-align:center; width:clamp(120px,20vw,240px)}
+.stand .who{font-family:var(--display); font-weight:700; font-size:clamp(16px,2vw,26px); word-break:break-word}
+.stand .sc{font-family:var(--mono); color:var(--muted); margin-top:4px}
+.stand .medal{font-size:clamp(26px,3.4vw,44px); line-height:1}
+.stand.p1{height:clamp(190px,26vw,270px); background:linear-gradient(180deg,#FFF6E2,#fff)}
+.stand.p2{height:clamp(160px,21vw,220px); background:linear-gradient(180deg,#EFF3F7,#fff)}
+.stand.p3{height:clamp(140px,18vw,190px); background:linear-gradient(180deg,#F7EDE4,#fff)}
+.table{max-width:640px; margin:0 auto; background:var(--card); border-radius:var(--r); box-shadow:var(--shadow); overflow:hidden}
+.table .r{display:flex; align-items:center; gap:14px; padding:12px 20px; border-bottom:1px solid var(--edge)}
+.table .r:last-child{border-bottom:0}
+.table .r b{width:34px; color:var(--muted); font-family:var(--mono)}
+.table .r .nm{flex:1; font-weight:500}
+.table .r .sc{font-family:var(--mono); font-weight:700}
+
+/* ============================================================
+   PLAYER (טלפון)
+   ============================================================ */
+#player{min-height:100dvh; display:flex; flex-direction:column}
+.p-top{display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--edge); background:var(--card)}
+.p-top .me{font-family:var(--display); font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:52%}
+.p-top .sc{font-family:var(--mono); font-weight:700; color:var(--brand)}
+.p-body{flex:1; display:flex; flex-direction:column; padding:16px; gap:14px}
+.p-body > .pill{align-self:flex-start}
+.p-center{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:14px; padding:20px}
+.p-center h2{font-size:24px}
+.p-center p{color:var(--muted); margin:0; max-width:34ch}
+.field{width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px}
+.field input{
+  width:100%; padding:16px 18px; font-size:19px; font-family:var(--body);
+  border:2px solid var(--edge); border-radius:14px; background:var(--card); color:var(--ink);
+}
+.field input:focus{border-color:var(--brand); outline:none}
+.p-q{font-family:var(--display); font-weight:700; font-size:19px; line-height:1.3}
+.p-opts{display:grid; gap:10px; margin-top:auto}
+.p-opt{
+  display:flex; align-items:center; gap:12px; text-align:start; padding:16px;
+  border-radius:14px; box-shadow:var(--shadow); font-size:17px; font-weight:500;
+  border:3px solid transparent; background:var(--card); min-height:64px;
+}
+.p-opt .letter{flex:none; width:38px; height:38px; border-radius:10px; display:grid; place-items:center; font-family:var(--display); font-weight:800; color:#22303C}
+.p-opt:nth-child(1) .letter{background:var(--opt-a)}
+.p-opt:nth-child(2) .letter{background:var(--opt-b)}
+.p-opt:nth-child(3) .letter{background:var(--opt-c)}
+.p-opt:nth-child(4) .letter{background:var(--opt-d)}
+.p-opt .body{flex:1; min-width:0; word-break:break-word}
+.p-opt .body.ltr{font-family:var(--mono); font-size:15px}
+.p-opt.picked{border-color:var(--brand); background:var(--brand-soft)}
+.p-opt[disabled]{opacity:.55}
+.p-opt.picked[disabled]{opacity:1}
+.verdict{
+  border-radius:var(--r); padding:26px 20px; text-align:center; width:100%; max-width:420px;
+  animation:pop .35s cubic-bezier(.2,.9,.3,1.3);
+}
+.verdict.yes{background:var(--ok-bg); color:#14503A}
+.verdict.no{background:var(--no-bg); color:#6E2B26}
+.verdict h2{font-size:26px; margin-bottom:6px}
+.verdict .gain{font-family:var(--mono); font-size:38px; font-weight:700; margin:8px 0}
+.verdict .sub{font-size:15px; opacity:.85}
+.stats{display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap}
+.stats div{background:var(--card); border:1px solid var(--edge); border-radius:12px; padding:10px 16px; text-align:center; min-width:96px}
+.stats b{display:block; font-family:var(--mono); font-size:20px; color:var(--brand)}
+.stats span{font-size:12px; color:var(--muted)}
+.spinner{width:34px; height:34px; border:3px solid var(--edge); border-top-color:var(--brand); border-radius:50%; animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.warn{background:#FDF3D8; border:1px solid #E9D49A; color:#6A5320; border-radius:12px; padding:12px 16px; font-size:14px; margin-top:14px; text-align:start}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+</head>
+<body>
+
+<!-- ============================ BOARD ============================ -->
+<div id="board" class="hidden">
+  <div class="topbar">
+    <div class="brandmark">
+      <b>חידון כיתתי</b>
+      <small>יחידה 1 · הדפסה, משתנים וקלט</small>
+    </div>
+    <div class="right">
+      <span class="pill" id="statusPill"><span class="dot" id="statusDot"></span><span id="statusText">מתחבר…</span></span>
+      <span class="pill hidden" id="codePill">קוד חדר: <b class="mono" id="codePillVal" style="letter-spacing:.1em"></b></span>
+      <span class="pill" id="countPill"><span id="countVal">0</span> מחוברים</span>
+      <button class="btn ghost" id="fsBtn" title="מסך מלא (F)">מסך מלא</button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <!-- ---------- לובי ---------- -->
+    <section id="lobbyView">
+      <div class="lobby">
+        <div class="joincard">
+          <h2>סרקו והצטרפו</h2>
+          <p>פותחים את המצלמה בטלפון, סורקים, ומקלידים שם.</p>
+          <div id="qrbox"><div class="spinner"></div></div>
+          <div class="codeplate" id="codeBig">····</div>
+          <div class="joinurl" id="joinUrl"></div>
+          <div class="warn hidden" id="fileWarn">
+            הקובץ נפתח ישירות מהמחשב (file://) ולכן הקישור ב-QR לא יעבוד בטלפונים.
+            הריצו שרת מקומי או העלו את התיקייה ל-GitHub Pages – ההוראות ב-README.
+          </div>
+        </div>
+
+        <div class="lobby-side">
+          <h2>מי כבר כאן?</h2>
+          <p class="lede">כשכולם ברשימה – בוחרים כמה שאלות ומתחילים. אפשר להצטרף גם באמצע החידון.</p>
+          <div class="counter"><span id="lobbyCount">0</span><small>תלמידים מחוברים</small></div>
+          <div class="players" id="playersList"></div>
+          <div style="margin-top:28px">
+            <button class="btn lg" id="toSetup">המשך להגדרת החידון</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- הגדרות ---------- -->
+    <section id="setupView" class="hidden">
+      <div class="setup">
+        <h2 style="font-size:clamp(24px,3.4vw,38px)">כמה שאלות בחידון?</h2>
+        <p style="color:var(--muted); margin-top:8px">כל נושא מיוצג, והשאלות נשארות מסודרות מהקל אל הקשה.</p>
+        <div class="counts" id="counts"></div>
+        <div class="breakdown" id="breakdown"></div>
+        <button class="btn lg" id="startBtn">התחלת החידון</button>
+        <div style="margin-top:14px"><button class="btn ghost" id="backLobby">חזרה ללובי</button></div>
+      </div>
+    </section>
+
+    <!-- ---------- משחק ---------- -->
+    <section id="playView" class="hidden">
+      <div class="qhead">
+        <div class="steps" id="steps"></div>
+        <span class="pill" id="qmeta"></span>
+      </div>
+      <div class="qtopic" id="qtopic"></div>
+      <div class="qtext" id="qtext"></div>
+      <div id="qcode"></div>
+      <div class="opts" id="qopts"></div>
+      <div class="note hidden" id="qnote"></div>
+      <div class="top3 hidden" id="top3"></div>
+      <div class="footbar">
+        <div class="answered"><span id="ansCount">0 / 0</span><small id="ansHint">ענו עד כה</small></div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <button class="btn ghost hidden" id="skipBtn">דילוג על השאלה</button>
+          <button class="btn lg" id="mainBtn">חשיפת התשובה</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- סיום ---------- -->
+    <section id="finalView" class="hidden">
+      <div style="text-align:center">
+        <h2 style="font-size:clamp(28px,4vw,46px)">כל הכבוד!</h2>
+        <p style="color:var(--muted)">התוצאות הסופיות</p>
+      </div>
+      <div class="podium" id="podium"></div>
+      <div class="table" id="finalTable"></div>
+      <div style="text-align:center; margin-top:26px">
+        <button class="btn ghost" id="againBtn">חידון חדש (טעינה מחדש)</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ============================ PLAYER ============================ -->
+<div id="player" class="hidden">
+  <div class="p-top">
+    <span class="me" id="pName">—</span>
+    <span class="pill" style="padding:4px 10px"><span class="dot" id="pDot"></span><span id="pStatus">מתחבר…</span></span>
+    <span class="sc" id="pScore">0</span>
+  </div>
+  <div class="p-body" id="pBody"></div>
+</div>
+
+<!-- מאגר השאלות – מוטמע ישירות בקובץ -->
+<script>
+/* ------------------------------------------------------------------
+   מאגר השאלות – יחידה 1: הדפסה, משתנים וקלט
+   ------------------------------------------------------------------
+   שימו לב: התשובה הנכונה וההסבר מקודדים בשדה k, כדי שתלמיד שיפתח
+   "הצג מקור" בדפדפן לא יראה את מפתח התשובות. זה טשטוש, לא הצפנה.
+   הקובץ הקריא לעריכה נמצא ב-questions-master.js, וההמרה נעשית
+   בעזרת encoder.html.
+
+   אפשר גם לכתוב שאלה חדשה בגלוי, בלי k, כך:
+       answer: 1,           // 0=א 1=ב 2=ג 3=ד
+       note: "הסבר קצר"
+   התוכנה תומכת בשתי הצורות. פשוט התשובה תהיה גלויה למי שיסתכל בקוד.
+------------------------------------------------------------------ */
+
+const TOPICS = [
+  {
+    id: "t1",
+    name: "הדפסה, טיפוסים ושמות משתנים"
+  },
+  {
+    id: "t2",
+    name: "משתנים, השמה וחיבור מחרוזות"
+  },
+  {
+    id: "t3",
+    name: "קלט מהמשתמש והמרות"
+  },
+  {
+    id: "t4",
+    name: "המרות בין טיפוסים, char ו-ASCII"
+  }
+];
+
+const QUESTIONS = [
+  { id: 1, topic: "t1",
+    text: "מה ההבדל בין Console.Write לבין Console.WriteLine?",
+    options: ["אין הבדל, שתיהן זהות", "Write יורדת שורה בסוף ההדפסה, WriteLine לא", "WriteLine יורדת שורה בסוף ההדפסה, Write לא", "Write מדפיסה רק מספרים ו-WriteLine רק טקסט"],
+    k: "OlECS1NmTUACRxlfNB8PFA==" },
+  { id: 2, topic: "t1",
+    text: "באיזה טיפוס נשתמש כדי לשמור את מספר התלמידים בכיתה?",
+    options: ["double", "int", "string", "char"],
+    k: "OlECS1NlTUACRxkTlu20yL7wtspMsonm3aT9vvCD8rX1sr4Rlue0/L7EQbXGsr3m2KTwSb7KtsO7wfSZYaTKvvWD/EKO5bARlua09b7Ptv1MDE1Fb1Ee" },
+  { id: 3, topic: "t1",
+    text: "איזה שם משתנה אינו חוקי?",
+    options: ["nUmBeR", "num1", "1num", "mispar"],
+    k: "OlECS1NmTUACRxkTltq09EmD/7XFsonm4aT3Sb7ItvJMsrrm2qT2vvV0tv678fSbluS08L7IQbX9soLm5aTLvv16Qx8=" },
+  { id: 4, topic: "t1",
+    text: "איזה ערך מתאים למשתנה מטיפוס bool?",
+    options: ["\"true\"", "true", "1.5", "'T'"],
+    k: "OlECS1NlTUACRxkTHVEXGxwxPUBMsoHm3FO09778tvm79fSkltlDvv2D9LX8RfSvluS0wb7BtvS7zw8Rlu+0+UmDw7XEsrkRluK0/L7Itvu79fSRlupNSxQ=" },
+  { id: 5, topic: "t1",
+    text: "מה יודפס?",
+    code: "int num = 34;\nConsole.WriteLine(num);",
+    options: ["num", "34", "\"num\"", "שגיאה"],
+    k: "OlECS1NlTUACRxkTluK09b7NQbXysovm2qTzvvyDy0KO5bARlu20/L7Htsa7xAPm1aTBvsGD+0K7zPSRlu20z77EQbX9sr3m6KTJvsmD9U5Msr/m0VO0wL7KtvdCR14=" },
+  { id: 6, topic: "t1",
+    text: "איזו השמה של תו בודד כתובה נכון?",
+    options: ["char c = \"a\";", "char c = a;", "char c = 'a';", "char c = (a);"],
+    k: "OlECS1NmTUACRxkTltm0/EmD8LX5srDm0lO0yb7Ptsi79APm0KT6vvZ0tvC7zfSYluq08L7JQbX9srbm0qTwvvCD/E5Msr3m1qTLvvyD97XGRcGx0lO0+L7Ntv1Msr3m6aT4vvmD9LXGRfSqlte0/L7Itve7zw0TPA==" },
+  { id: 7, topic: "t1",
+    text: "מה יודפס?",
+    code: "Console.Write(\"Hello\");\nConsole.Write(\"World\");",
+    options: ["HelloWorld", "Hello\nWorld", "Hello World", "World\nHello"],
+    k: "OlECS1NkTUACRxkTFgEKHQx0tv679QPm2KT2vsGD8rXGRfSYlua0wb7AQbX5sr/m0VO0977BtsO7/PSVludDvsGD9LX5srQfYw4=" },
+  { id: 8, topic: "t1",
+    text: "איזה שם משתנה אסור לפי חוקי השפה?",
+    options: ["myInt", "int", "number_1", "Sum"],
+    k: "OlECS1NlTUACRxkTKB0XSb7Atvu79QPm36T6vvWD9UK7zPSvlua0wb7AQbXFsr8Rlue0wL7wtvZMsrbm3aT4vvZ0tvK7/APm0aTHvsCDyUK7+fSlltq0w77KtstMsrLm1VO08r79tv9Msr3m6KTJvsmD9UxOGA==" },
+  { id: 9, topic: "t2",
+    text: "מה יודפס?",
+    code: "string name = \"Gili\";\nname = \"Ofri\";\nConsole.WriteLine(\"my name is \" + name);",
+    options: ["my name is Gili", "my name is Ofri", "my name is GiliOfri", "my name is name"],
+    k: "OlECS1NlTUACRxkTlue0wL7KtvZMsrTm0qTKvv10tvG78PSZltK0w0mD8bXGRfSlltG0wb7OQbX4soTm1KTwvvR6Qx8=" },
+  { id: 10, topic: "t2",
+    text: "מה יודפס?",
+    code: "int num = 1;\nint newNum = num + 3;\nConsole.WriteLine(newNum);",
+    options: ["1", "3", "4", "13"],
+    k: "OlECS1NmTUACRxlfNB8PFA==" },
+  { id: 11, topic: "t2",
+    text: "מה ידפיס הקוד הבא?",
+    code: "Console.WriteLine(\"hello\" + 2 + 1);",
+    options: ["hello3", "hello21", "hello 2 1", "שגיאה"],
+    k: "OlECS1NlTUACRxkTlue0/r7NtvO78PSZYaT9vsCD/7X8sr8Rlu+08L7Ktvu7+hkRHVELDAU4Dj5OThERlui0+L78QbX4sofm21O09b7KtvW7zfSkluW0w0V0tve7+fSqluxDWEmDybXLRfSvltq0/L78tsu7zQPm0KTCvvyDwkxOGA==" },
+  { id: 12, topic: "t2",
+    text: "מה ידפיס הקוד הבא?",
+    code: "Console.WriteLine(2 + 1 + \"hello\");",
+    options: ["21hello", "3hello", "hello3", "שגיאה"],
+    k: "OlECS1NlTUACRxkTlui0+b7LQVBHVAPm1qT2vsCD8EK7/vSvltK0zb78tvu7+APm3aTHvsmD+EK7zPSlluG0y770tvdMsr/m36T0vsGD9LX6sokfYw4=" },
+  { id: 13, topic: "t2",
+    text: "מה יודפס?",
+    code: "int num = 6;\nConsole.WriteLine(\"ABC\" + num + 1);",
+    options: ["ABC7", "ABC61", "ABC6 1", "שגיאה"],
+    k: "OlECS1NlTUACRxkTluO0/L7+tvdMsrjm3aT/Sb7Ptvy78APm0KTKvvmD/bX4RRIAYZHj+kmD8LXEsrHm41O0wL7EtvW79gPm1aTzvvuDxbX1sr4Rlu20/r78tve78/SbbVO0/b7Ptv5Msrfm1KTHvvN0tv67zPSZltq0/L78T0AR" },
+  { id: 14, topic: "t2",
+    text: "איזו הכרזה על משתנה היא חוקית?",
+    options: ["int x = 5.5;", "double y = 7;", "string s = 'hello';", "char c = \"a\";"],
+    k: "OlECS1NlTUACRxkTlue09778tvZMsr0cKB0XSb7ITAYDEEFdJFO0/b7NtvJMsrPm1KT7vvyD/7X0srrm619DvvyD/bX3srwRJRwWCwUxQRtMWAMGelO0/r7BtsW7/A0TPA==" },
+  { id: 15, topic: "t2",
+    text: "מצאו את הבאג בקוד:",
+    code: "int num = 5;\nint num = 8;\nConsole.WriteLine(num);",
+    options: ["אסור להשים 8 במשתנה מטיפוס int", "הוכרז פעמיים משתנה באותו שם – בשורה השנייה צריך לכתוב ‎num = 8;", "חסרה נקודה-פסיק בסוף השורה הראשונה", "אין באג, יודפס 5"],
+    k: "OlECS1NlTUACRxkTlu208r78tvu78/Solu5DvsuD/UK7+/SYltm0yb7AQbXIsoHm3FO0+b7DtshMsrLm3aTyvvp6QbX8srTm6VO08r7OQbXEsoQRlu20wL7Ntvy7/PSsYaTyvvx0tsC7zfSrb1Ee" },
+  { id: 16, topic: "t3",
+    text: "איזה טיפוס מחזירה הפקודה ()Console.ReadLine?",
+    options: ["int", "char", "string", "double"],
+    k: "OlECS1NmTUACRxlfNB8PFA==" },
+  { id: 17, topic: "t3",
+    text: "באיזו שורה נשתמש כדי לקלוט טקסט מהמשתמש ולשמור אותו?",
+    options: ["Console.WriteLine();", "string s = Console.ReadLine();", "Console.Write(s);", "string s = \"Console.ReadLine()\";"],
+    k: "OlECS1NlTUACRxlfNB8PFA==" },
+  { id: 18, topic: "t3",
+    text: "מצאו את הבאג בקוד:",
+    code: "Console.ReadLine(\"Enter number\");",
+    options: ["אין באג", "ל-ReadLine לא מעבירים הודעה בסוגריים – יש להדפיס אותה בשורה נפרדת עם WriteLine", "צריך לכתוב Console.Read במקום Console.ReadLine", "לא צריך נקודה-פסיק"],
+    k: "OlECS1NlTUACRxlfNB8PFA==" },
+  { id: 19, topic: "t3",
+    text: "איזו שורה קולטת מהמשתמש מספר שלם?",
+    options: ["int age = Console.ReadLine();", "int age = int.Parse(Console.ReadLine());", "string age = int.Parse(Console.ReadLine());", "int age = double.Parse(Console.ReadLine());"],
+    k: "OlECS1NlTUACRxlfNB8PFA==" },
+  { id: 20, topic: "t3",
+    text: "איזו שורה קולטת מהמשתמש מספר עשרוני?",
+    options: ["double price = Console.ReadLine();", "double price = int.Parse(Console.ReadLine());", "double price = double.Parse(Console.ReadLine());", "int price = double.Parse(Console.ReadLine());"],
+    k: "OlECS1NmTUACRxlfNB8PFA==" },
+  { id: 21, topic: "t3",
+    text: "מדוע השורה הבאה תגרום לשגיאה?",
+    code: "int age = Console.ReadLine();",
+    options: ["כי ()Console.ReadLine מחזירה string, ולא ניתן להשים אותה ב-int ללא המרה", "כי חסרים סוגריים אחרי ReadLine", "כי אסור לקרוא למשתנה age", "כי צריך להשתמש ב-Console.WriteLine כדי לקלוט"],
+    k: "OlECS1NkTUACRxlfNB8PFA==" },
+  { id: 22, topic: "t3",
+    text: "המשתמש הקליד 15. מה יודפס?",
+    code: "Console.WriteLine(\"Enter your age:\");\nint age = int.Parse(Console.ReadLine());\nConsole.WriteLine(\"next year you will be \" + (age + 1) + \" years old\");",
+    options: ["next year you will be 15 years old", "next year you will be 16 years old", "next year you will be 151 years old", "next year you will be age+1 years old"],
+    k: "OlECS1NlTUACRxkTlue0yL7BtvC7zfSoluq09EmD/7X3sovm2KT0vvCD/EK7+fSmltq0+EllVEldRfSqlu20yL7wtsq7/PSsYaT/vs2DwbX1RfSlltq0wb79tve7zQ0TPA==" },
+  { id: 23, topic: "t3",
+    text: "בקוד מהשאלה הקודמת הסירו את הסוגריים סביב age + 1. המשתמש הקליד 15. מה יודפס עכשיו?",
+    code: "Console.WriteLine(\"next year you will be \" + age + 1 + \" years old\");",
+    options: ["next year you will be 16 years old", "next year you will be 151 years old", "next year you will be 15 1 years old", "שגיאת קומפילציה"],
+    k: "OlECS1NlTUACRxkTluK09b7NQbXNsrbm06TLvvCD+LXxRcGx0lO0/URlQbXEsoQRlu20wL7Btsq7zPSZYaTzvv6DybX1RRIEYaT2vveDy7XLsrLm3VNSXFh6Qx8=" },
+  { id: 24, topic: "t4",
+    text: "איזו שורה תגרום לשגיאת קומפילציה?",
+    options: ["double d = 5;", "int n = 5.0;", "double d = 5.5;", "int n = 5;"],
+    k: "OlECS1NlTUACRxkTlu1OAAcgQbXwSEdeNBEPDEmD9bX4sr3m6aT3Sb7Etve7/fSklu208b7NtshARfShluK09UmD/08IClZTLRZDvvV5CAwYRfSmluq08L7Ftvu7+APm1aT9vsGD9UK7+/SVlua0wb79tshMsoHm3FNLAAcgSExOGA==" },
+  { id: 25, topic: "t4",
+    text: "מה יודפס?",
+    code: "double d = 7.9;\nint n = (int)d;\nConsole.WriteLine(n);",
+    options: ["7.9", "8", "7", "שגיאה"],
+    k: "OlECS1NmTUACRxkTlue0/b7Ktsq78QMZKB0XQEmD9rX5sonm2qTJSb7EtshMsrfm1qT/vs50tva7x/SYltu0/L70tvtMsrbm3aTzSb7KtsC79/StltlDi+nHQVVCXAPm1aT2vs2D+0K7+Q4Gb1Ee" },
+  { id: 26, topic: "t4",
+    text: "חידה – עקבו אחרי הערכים שורה אחר שורה. מה יודפס?",
+    code: "int a = 1;\nint b = 2;\nint c = 3;\na = b;\nb = c;\nc = a + b;\nConsole.WriteLine(c);",
+    options: ["3", "4", "5", "6"],
+    k: "OlECS1NmTUACRxkTlu20y77ztvNWRUIMc19DvvmD9rXERfSqlulDC1RnTUK78PStluK0yL7BtsFMBgMMYUFIWklpQVdCR14=" },
+  { id: 27, topic: "t4",
+    text: "מה יודפס?",
+    code: "char c = 'A';\nConsole.WriteLine((int)c);",
+    options: ["A", "65", "97", "0"],
+    k: "OlECS1NlTUACRxkTZjJESb7Atve79QMHdFO0+L7MtvO7+fSbYTIwKiAdT0JEQkIWYaT3vs6D+bXMsrcRlue08L7EQVtbSwoTPA==" },
+  { id: 28, topic: "t4",
+    text: "מה יודפס?",
+    code: "int n = 66;\nchar c = (char)n;\nConsole.WriteLine(c);",
+    options: ["66", "A", "B", "b"],
+    k: "OlECS1NmTUACRxkTd0ZDvv2D9LX8RQRwZl9DvvyD/bX3srwRd0VDvv2D9LX8RQRzZl1BFA==" },
+  { id: 29, topic: "t4",
+    text: "מה יודפס?",
+    code: "char c = '7';\nConsole.WriteLine(c - '0');",
+    options: ["7", "55", "48", "'7'"],
+    k: "OlECS1NkTUACRxkTZkRESb7Atve79QPm1aTJvvx0tsu7x/SZlui0/ElhVE5MsrYcZkNESb7Atve79QMFeV1Dvv2D9rX1soLm1KTLSb7KtvW78/SolttDvvmDy0K78fSQlte0wb7AQbXOsoXm36T3U0lhVE9YXQMMYURNSb7CtvdMsrfm0qTLvvN0tva7xPSpltO0+r78tvq7/PSbYaT/vv2D/7X1sosRltm0/ESDwLXIsovm1VO09b7KtsO7wfSZb1Ee" },
+  { id: 30, topic: "t4",
+    text: "האותיות הגדולות באנגלית שמורות בטבלת ASCII ברצף. מה יודפס?",
+    code: "char letter = 'D';\nint position = letter - 'A' + 1;\nConsole.WriteLine(\"position \" + position);",
+    options: ["position 3", "position 4", "position 68", "position D"],
+    k: "OlECS1NlTUACRxkTZjdEVF9sTUJLJAQMd0ZPSb7Btv67/vSuYUVbRF9hSlNMWAMFb1Ee" }
+];
+
+</script>
+<!-- ספריית QR: מקור ראשי, ואם נכשל – מקור גיבוי -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"
+        onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js';document.head.appendChild(s);"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+/* ================================================================
+   0. עזרים כלליים
+   ================================================================ */
+const $  = s => document.querySelector(s);
+const el = (t,c,txt)=>{const e=document.createElement(t); if(c)e.className=c; if(txt!=null)e.textContent=txt; return e;};
+const HEB_LETTERS = ['א','ב','ג','ד'];
+const hasHebrew = s => /[\u0590-\u05FF]/.test(s);
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+const CFG = {
+  PREFIX: 'csq1-',        // תחילית ל-ID ברשת PeerJS (מונע התנגשות עם חדרים אחרים)
+  MAX_TIME: 20,           // שניות עד שבונוס המהירות מתאפס
+  BASE: 500,              // נקודות בסיס לתשובה נכונה
+  BONUS: 500              // תוספת מקסימלית על מהירות
+};
+
+/* פענוח התשובה הנכונה וההסבר.
+   הם שמורים מקודדים בשדה k כדי שלא יופיעו בגלוי ב"הצג מקור" –
+   טשטוש בלבד, לא הצפנה. הפונקציה נקראת רק בצד הלוח,
+   כך שבטלפון של התלמיד התשובות לא קיימות בזיכרון בכלל. */
+const KEY = 'AsciiTable#1';
+function unlock(q){
+  if(q.answer != null) return {a:q.answer, n:q.note || null};   // שאלה שנכתבה בגלוי
+  const bin = atob(q.k), out = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) out[i] = bin.charCodeAt(i) ^ KEY.charCodeAt(i % KEY.length);
+  const o = JSON.parse(new TextDecoder().decode(out));
+  return {a:o.a, n:o.n || null};
+}
+
+/* צביעה קלה של קוד C# – מעבר יחיד כדי למנוע החלפות מקוננות */
+const SYNTAX = /("(?:[^"\\]|\\.)*")|('(?:[^'\\]|\\.)*')|\b(int|double|char|string|bool|var|new|true|false)\b|\b(Console|WriteLine|Write|ReadLine|Parse)\b|\b(\d+(?:\.\d+)?)\b/g;
+function highlight(code){
+  return esc(code).replace(SYNTAX,(m,str,chr,kw,fn,num)=>{
+    if(str||chr) return '<span class="s">'+m+'</span>';
+    if(kw)  return '<span class="k">'+m+'</span>';
+    if(fn)  return '<span class="f">'+m+'</span>';
+    if(num) return '<span class="n">'+m+'</span>';
+    return m;
+  });
+}
+function consoleBlock(code, sizeVar){
+  const box = el('div','console');
+  if(sizeVar) box.style.setProperty('--code-size', sizeVar);
+  box.innerHTML =
+    '<div class="console-bar"><i></i><i></i><i></i><span>Program.cs</span></div>' +
+    '<pre>' + highlight(code) + '<span class="caret"></span></pre>';
+  return box;
+}
+
+/* ================================================================
+   1. בחירת השאלות
+   ------------------------------------------------------------
+   דרישות: לפחות שאלה אחת מכל נושא, פיזור יחסי לגודל הנושא,
+   ובתוך כל נושא – פריסה אחידה על ציר הקושי. בסוף ממיינים לפי id
+   כדי שהחידון כולו יישאר מהקל אל הקשה.
+   ================================================================ */
+function pickQuestions(all, n){
+  const groups = TOPICS
+    .map(t => all.filter(q => q.topic === t.id).sort((a,b)=>a.id-b.id))
+    .filter(g => g.length);
+  n = Math.max(groups.length, Math.min(n, all.length));
+
+  const quota = groups.map(()=>1);                  // לפחות אחת מכל נושא
+  let left = n - groups.length;
+  const spare = groups.map(g => g.length - 1);
+  const spareTotal = spare.reduce((a,b)=>a+b,0);
+
+  const exact  = spare.map(s => spareTotal ? left * s / spareTotal : 0);
+  const floors = exact.map(Math.floor);
+  let used = floors.reduce((a,b)=>a+b,0);
+  const order = exact.map((e,i)=>({i, frac:e - Math.floor(e)})).sort((a,b)=>b.frac - a.frac);
+  let guard = 0;
+  while(used < left && guard++ < 500){              // חלוקת השארית לפי השבר הגדול ביותר
+    let moved = false;
+    for(const {i} of order){
+      if(used >= left) break;
+      if(floors[i] < spare[i]){ floors[i]++; used++; moved = true; }
+    }
+    if(!moved) break;
+  }
+  groups.forEach((g,i)=> quota[i] = Math.min(g.length, quota[i] + floors[i]));
+
+  const picked = [];
+  groups.forEach((g,i)=>{
+    const m = quota[i], L = g.length;
+    if(m === 1){ picked.push(g[0]); return; }
+    for(let j=0;j<m;j++) picked.push(g[Math.round(j*(L-1)/(m-1))]);
+  });
+  return [...new Set(picked)].sort((a,b)=>a.id-b.id);
+}
+function breakdownOf(list){
+  return TOPICS.map(t => ({name:t.name, n:list.filter(q=>q.topic===t.id).length})).filter(x=>x.n);
+}
+
+/* ================================================================
+   2. ניתוב: לוח או טלפון
+   ================================================================ */
+const params = new URLSearchParams(location.search);
+const ROOM = (params.get('r') || '').toUpperCase().trim();
+const IS_PLAYER = !!ROOM;
+document.getElementById(IS_PLAYER ? 'player' : 'board').classList.remove('hidden');
+
+const ALPHABET = 'ACDEFGHJKLMNPQRTUVWXY34679';
+const newCode = () => Array.from({length:4},()=>ALPHABET[Math.floor(Math.random()*ALPHABET.length)]).join('');
+
+/* ================================================================
+   3. צד הלוח (מארח)
+   ================================================================ */
+if(!IS_PLAYER){ (function board(){
+
+  const S = {
+    code:'', peer:null, phase:'lobby',
+    players:new Map(),          // id -> {id,name,score,conn,connected,choice,secs,gain}
+    list:[], qi:-1, qStart:0, locked:false, count:15, ans:null, note:null
+  };
+
+  /* ---------- חיבור ---------- */
+  function status(text, cls){
+    $('#statusText').textContent = text;
+    $('#statusDot').className = 'dot' + (cls ? ' '+cls : '');
+  }
+  function host(){
+    S.code = newCode();
+    S.peer = new Peer(CFG.PREFIX + S.code, {debug:1});
+    S.peer.on('open', ()=>{ status('הלוח מחובר','on'); showJoin(); });
+    S.peer.on('connection', wire);
+    S.peer.on('error', e=>{
+      if(e.type === 'unavailable-id'){ S.peer.destroy(); host(); return; }   // קוד תפוס – מגרילים שוב
+      if(e.type === 'peer-unavailable') return;                              // תלמיד שהתנתק
+      status('בעיית חיבור – רעננו את הדף','err');
+      console.error(e);
+    });
+    S.peer.on('disconnected', ()=>{ status('החיבור נותק, מנסה שוב…','err'); S.peer.reconnect(); });
+  }
+  function showJoin(){
+    const url = location.origin + location.pathname + '?r=' + S.code;
+    $('#codeBig').textContent = S.code;
+    $('#codePillVal').textContent = S.code;
+    $('#codePill').classList.remove('hidden');
+    $('#joinUrl').textContent = url.replace(/^https?:\/\//,'');
+    if(location.protocol === 'file:') $('#fileWarn').classList.remove('hidden');
+    renderQR(url);
+  }
+  function renderQR(url, tries){
+    tries = tries || 0;
+    const box = $('#qrbox');
+    const ready = (window.QRCode && QRCode.toCanvas) || window.QRious;
+    if(!ready){                                   // הספרייה עוד בטעינה – ננסה שוב
+      if(tries < 30) return setTimeout(()=>renderQR(url, tries+1), 200);
+      return fallback();
+    }
+    box.innerHTML = '';
+    const cv = document.createElement('canvas'); box.appendChild(cv);
+    if(window.QRCode && QRCode.toCanvas)
+      QRCode.toCanvas(cv, url, {width:640, margin:1, color:{dark:'#1C2A35', light:'#FFFFFF'}}, err=>{ if(err) fallback(); });
+    else
+      new QRious({element:cv, value:url, size:640, foreground:'#1C2A35', level:'M'});
+    function fallback(){
+      box.innerHTML = '<div style="font-size:15px;color:var(--muted);padding:16px;line-height:1.6">אין חיבור לספריית ה-QR.<br>הכתיבו לתלמידים את הכתובת והקוד שמתחת.</div>';
+    }
+  }
+
+  /* ---------- הודעות מהתלמידים ---------- */
+  function wire(conn){
+    conn.on('data', msg => onMsg(conn, msg));
+    conn.on('close', ()=>{
+      const p = [...S.players.values()].find(p => p.conn === conn);
+      if(p){ p.connected = false; paintLobby(); }
+    });
+  }
+  function onMsg(conn, msg){
+    if(!msg || typeof msg !== 'object') return;
+
+    if(msg.t === 'join'){
+      const name = String(msg.name||'').trim().slice(0,14);
+      if(!name) return conn.send({t:'rejected', why:'צריך שם'});
+      const same = [...S.players.values()].find(p => p.name.toLowerCase() === name.toLowerCase());
+      const busy = same && same.conn && same.conn.open && same.conn !== conn;
+      if(busy) return conn.send({t:'rejected', why:'השם הזה כבר תפוס – בחרו שם אחר'});
+      const p = same || {id:conn.peer, name, score:0, choice:null, secs:0, gain:0};
+      p.conn = conn; p.connected = true;
+      S.players.set(p.id, p);
+      conn.send({t:'accepted', name:p.name, score:p.score});
+      conn.send(snapshot(p));
+      paintLobby();
+      return;
+    }
+
+    if(msg.t === 'answer'){
+      const p = [...S.players.values()].find(p => p.conn === conn);
+      if(!p || S.phase !== 'asking' || S.locked || p.choice !== null) return;
+      const c = Number(msg.choice);
+      if(!(c >= 0 && c <= 3)) return;
+      p.choice = c;
+      p.secs = (Date.now() - S.qStart) / 1000;      // הזמן נמדד אצל המארח – אמין יותר
+      conn.send({t:'locked-in', choice:c});
+      paintTally();
+    }
+  }
+  const send = (p, m) => { try{ if(p.conn && p.conn.open) p.conn.send(m); }catch(e){} };
+  const all  = m => S.players.forEach(p => send(p, m));
+
+  function snapshot(p){
+    const q = S.list[S.qi];
+    if(S.phase === 'asking') return {...qPayload(q), t:'question', already:p.choice};
+    if(S.phase === 'revealed') return resultFor(p);
+    if(S.phase === 'over') return finalFor(p);
+    return {t:'waiting'};
+  }
+  const qPayload = q => ({
+    t:'question', qi:S.qi, total:S.list.length,
+    text:q.text, code:q.code||null, options:q.options
+  });
+
+  /* ---------- לובי ---------- */
+  function paintLobby(){
+    const ps = [...S.players.values()];
+    const live = ps.filter(p => p.connected).length;
+    $('#lobbyCount').textContent = live;
+    $('#countVal').textContent = live;
+    const box = $('#playersList'); box.innerHTML = '';
+    ps.forEach(p => { const c = el('div','chip'+(p.connected?'':' off'), p.name); box.appendChild(c); });
+  }
+
+  /* ---------- הגדרות ---------- */
+  const OPTIONS_N = [10,15,20,25,30].filter(n => n <= QUESTIONS.length);
+  function paintSetup(){
+    const box = $('#counts'); box.innerHTML = '';
+    OPTIONS_N.forEach(n=>{
+      const b = el('button','count');
+      b.innerHTML = n + '<em>' + (n === QUESTIONS.length ? 'הכל' : 'שאלות') + '</em>';
+      b.setAttribute('aria-pressed', String(n === S.count));
+      b.onclick = ()=>{ S.count = n; paintSetup(); };
+      box.appendChild(b);
+    });
+    const bd = breakdownOf(pickQuestions(QUESTIONS, S.count));
+    const bbox = $('#breakdown'); bbox.innerHTML = '';
+    bd.forEach(x => {
+      const s = el('span');
+      s.append(x.name + ' · ');
+      s.appendChild(el('b', null, String(x.n)));
+      bbox.appendChild(s);
+    });
+  }
+
+  /* ---------- שאלה ---------- */
+  function ask(){
+    S.phase = 'asking'; S.locked = false; S.qStart = Date.now();
+    S.ans = null; S.note = null;
+    S.players.forEach(p => { p.choice = null; p.secs = 0; p.gain = 0; });
+    const q = S.list[S.qi];
+
+    $('#qtopic').textContent = (TOPICS.find(t => t.id === q.topic)||{}).name || '';
+    $('#qtext').textContent = q.text;
+    $('#qcode').innerHTML = '';
+    if(q.code) $('#qcode').appendChild(consoleBlock(q.code));
+    $('#qmeta').textContent = 'שאלה ' + (S.qi+1) + ' מתוך ' + S.list.length;
+    $('#qnote').classList.add('hidden');
+    $('#top3').classList.add('hidden');
+    $('#playView').classList.remove('revealed');
+    $('#mainBtn').textContent = 'חשיפת התשובה';
+    $('#skipBtn').classList.remove('hidden');
+    $('#ansHint').textContent = 'ענו עד כה';
+
+    const box = $('#qopts'); box.innerHTML = '';
+    q.options.forEach((txt,i)=>{
+      const o = el('div','opt'); o.style.animationDelay = (i*0.05)+'s';
+      o.appendChild(el('div','letter', HEB_LETTERS[i]));
+      const b = el('div','body' + (hasHebrew(txt) ? '' : ' ltr'), txt);
+      o.appendChild(b);
+      o.appendChild(el('div','tally',''));
+      o.appendChild(el('div','bar'));
+      box.appendChild(o);
+    });
+
+    paintSteps(); paintTally();
+    all({...qPayload(q)});
+  }
+  function paintSteps(){
+    const box = $('#steps'); box.innerHTML = '';
+    S.list.forEach((_,i)=> box.appendChild(el('i', i < S.qi ? 'done' : i === S.qi ? 'now' : '')));
+  }
+  function paintTally(){
+    const live = [...S.players.values()].filter(p => p.connected);
+    const answered = live.filter(p => p.choice !== null).length;
+    $('#ansCount').textContent = answered + ' / ' + live.length;
+  }
+
+  function reveal(){
+    S.phase = 'revealed'; S.locked = true;
+    const q = S.list[S.qi];
+    const secret = unlock(q);
+    S.ans = secret.a; S.note = secret.n;
+    const counts = [0,0,0,0];
+
+    S.players.forEach(p=>{
+      if(p.choice !== null) counts[p.choice]++;
+      if(p.choice === S.ans){
+        const speed = Math.max(0, 1 - p.secs / CFG.MAX_TIME);
+        p.gain = CFG.BASE + Math.round(CFG.BONUS * speed);
+        p.score += p.gain;
+      } else p.gain = 0;
+    });
+
+    const total = counts.reduce((a,b)=>a+b,0) || 1;
+    [...$('#qopts').children].forEach((o,i)=>{
+      o.querySelector('.tally').textContent = counts[i];
+      o.querySelector('.bar').style.width = (counts[i]/total*100) + '%';
+      if(i === S.ans) o.classList.add('correct'); else if(counts[i] === 0) o.classList.add('dim');
+    });
+    $('#playView').classList.add('revealed');
+    if(S.note){ $('#qnote').textContent = S.note; $('#qnote').classList.remove('hidden'); }
+
+    const ranked = rank();
+    const t3 = $('#top3'); t3.innerHTML = '';
+    ranked.slice(0,3).forEach((p,i)=>{
+      const r = el('div','row');
+      r.appendChild(el('span','rank', ['🥇','🥈','🥉'][i]));
+      r.appendChild(el('span','nm', p.name));
+      r.appendChild(el('span','pts', p.score));
+      if(p.gain > 0) r.appendChild(el('span','gain','+'+p.gain));
+      t3.appendChild(r);
+    });
+    if(ranked.length) t3.classList.remove('hidden');
+
+    $('#mainBtn').textContent = (S.qi + 1 < S.list.length) ? 'לשאלה הבאה' : 'לסיכום';
+    $('#skipBtn').classList.add('hidden');
+    $('#ansHint').textContent = 'ענו על השאלה';
+    S.players.forEach(p => send(p, resultFor(p)));
+  }
+  const rank = () => [...S.players.values()].sort((a,b)=> b.score - a.score || a.name.localeCompare(b.name));
+  function resultFor(p){
+    const r = rank();
+    return {
+      t:'result', choice:p.choice, correctIndex:S.ans,
+      correct: p.choice === S.ans, gain:p.gain, score:p.score,
+      place: r.indexOf(p) + 1, of: r.length, note: S.note
+    };
+  }
+  function finalFor(p){
+    const r = rank();
+    return {t:'final', score:p.score, place:r.indexOf(p)+1, of:r.length,
+            podium:r.slice(0,3).map(x=>({name:x.name, score:x.score}))};
+  }
+
+  function finish(){
+    S.phase = 'over';
+    show('finalView');
+    const r = rank();
+    const pod = $('#podium'); pod.innerHTML = '';
+    [1,0,2].forEach(i=>{                                   // 2 – 1 – 3 כמו פודיום אמיתי
+      const p = r[i]; if(!p) return;
+      const st = el('div','stand p'+(i+1));
+      st.appendChild(el('div','medal', ['🥇','🥈','🥉'][i]));
+      st.appendChild(el('div','who', p.name));
+      st.appendChild(el('div','sc', p.score + ' נק׳'));
+      pod.appendChild(st);
+    });
+    const tb = $('#finalTable'); tb.innerHTML = '';
+    r.forEach((p,i)=>{
+      const row = el('div','r');
+      row.appendChild(el('b', null, (i+1)+'.'));
+      row.appendChild(el('span','nm', p.name));
+      row.appendChild(el('span','sc', p.score));
+      tb.appendChild(row);
+    });
+    S.players.forEach(p => send(p, finalFor(p)));
+  }
+
+  /* ---------- ניווט בין מסכים ---------- */
+  function show(id){
+    ['lobbyView','setupView','playView','finalView'].forEach(v => $('#'+v).classList.toggle('hidden', v !== id));
+  }
+  $('#toSetup').onclick  = ()=>{ show('setupView'); paintSetup(); };
+  $('#backLobby').onclick= ()=> show('lobbyView');
+  $('#startBtn').onclick = ()=>{
+    S.list = pickQuestions(QUESTIONS, S.count);
+    S.qi = 0; show('playView'); ask();
+    window.onbeforeunload = e => { e.preventDefault(); return ''; };
+  };
+  $('#mainBtn').onclick = ()=>{
+    if(S.phase === 'asking') reveal();
+    else if(S.phase === 'revealed'){
+      if(S.qi + 1 < S.list.length){ S.qi++; ask(); } else finish();
+    }
+  };
+  $('#skipBtn').onclick = ()=>{
+    if(S.qi + 1 < S.list.length){ S.qi++; ask(); } else finish();
+  };
+  $('#againBtn').onclick = ()=>{ window.onbeforeunload = null; location.reload(); };
+  $('#fsBtn').onclick = toggleFS;
+  function toggleFS(){ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
+
+  document.addEventListener('keydown', e=>{
+    if(e.target.tagName === 'INPUT') return;
+    if(e.key === ' ' || e.key === 'Enter'){
+      if(!$('#playView').classList.contains('hidden')){ e.preventDefault(); $('#mainBtn').click(); }
+    }
+    if(e.key === 'f' || e.key === 'F') toggleFS();
+  });
+
+  host(); paintLobby();
+})(); }
+
+/* ================================================================
+   4. צד התלמיד (טלפון)
+   ================================================================ */
+if(IS_PLAYER){ (function playerApp(){
+
+  const P = {peer:null, conn:null, name:'', score:0, q:null, picked:null};
+  const body = $('#pBody');
+  const clear = ()=> body.innerHTML = '';
+  function pstatus(text, cls){ $('#pStatus').textContent = text; $('#pDot').className = 'dot' + (cls?' '+cls:''); }
+
+  /* ---- מסך שם ---- */
+  function askName(msg){
+    clear();
+    const c = el('div','p-center');
+    c.appendChild(el('h2','','ברוכים הבאים לחידון'));
+    c.appendChild(el('p','','חדר ' + ROOM + ' · הקלידו את שמכם כדי להצטרף'));
+    const f = el('div','field');
+    const inp = document.createElement('input');
+    inp.maxLength = 14; inp.placeholder = 'השם שלי'; inp.autocomplete = 'off';
+    inp.value = localStorage.getItem('quizName') || '';
+    const btn = el('button','btn lg','הצטרפות');
+    f.appendChild(inp); f.appendChild(btn);
+    c.appendChild(f);
+    if(msg){ const w = el('div','warn', msg); c.appendChild(w); }
+    body.appendChild(c);
+    const go = ()=>{
+      const n = inp.value.trim();
+      if(!n) return inp.focus();
+      P.name = n; localStorage.setItem('quizName', n);
+      $('#pName').textContent = n;
+      connect();
+    };
+    btn.onclick = go;
+    inp.onkeydown = e => { if(e.key === 'Enter') go(); };
+    setTimeout(()=>inp.focus(), 120);
+  }
+
+  function connect(){
+    waiting('מתחבר ללוח…');
+    if(!P.peer){
+      P.peer = new Peer({debug:1});
+      P.peer.on('error', e=>{
+        if(e.type === 'peer-unavailable'){ pstatus('אין חדר כזה','err'); askName('לא נמצא לוח פעיל עם הקוד ' + ROOM + '. בדקו את הקוד או בקשו מהמורה לרענן.'); }
+        else pstatus('שגיאת רשת','err');
+      });
+      P.peer.on('open', open);
+      P.peer.on('disconnected', ()=>{ pstatus('מנסה להתחבר…','err'); P.peer.reconnect(); });
+    } else open();
+
+    function open(){
+      P.conn = P.peer.connect(CFG.PREFIX + ROOM, {reliable:true});
+      P.conn.on('open', ()=>{ pstatus('מחובר','on'); P.conn.send({t:'join', name:P.name}); });
+      P.conn.on('data', onMsg);
+      P.conn.on('close', ()=>{ pstatus('נותק','err'); waiting('החיבור ללוח נותק. נסו לרענן את הדף.'); });
+    }
+  }
+
+  function onMsg(m){
+    if(!m || typeof m !== 'object') return;
+    switch(m.t){
+      case 'accepted': P.score = m.score||0; $('#pScore').textContent = P.score; break;
+      case 'rejected': askName(m.why); break;
+      case 'waiting':  waiting('חכו למורה – החידון עוד לא התחיל'); break;
+      case 'question': showQuestion(m); break;
+      case 'locked-in':P.picked = m.choice; markPicked(); break;
+      case 'result':   showResult(m); break;
+      case 'final':    showFinal(m); break;
+    }
+  }
+
+  function waiting(text, sub){
+    clear();
+    const c = el('div','p-center');
+    c.appendChild(el('div','spinner'));
+    c.appendChild(el('h2','', text));
+    if(sub) c.appendChild(el('p','', sub));
+    body.appendChild(c);
+  }
+
+  function showQuestion(m){
+    P.q = m; P.picked = (m.already != null ? m.already : null);
+    clear();
+    body.appendChild(el('div','pill','שאלה ' + (m.qi+1) + ' מתוך ' + m.total));
+    body.appendChild(el('div','p-q', m.text));
+    if(m.code) body.appendChild(consoleBlock(m.code, '13px'));
+    const box = el('div','p-opts');
+    m.options.forEach((txt,i)=>{
+      const b = el('button','p-opt');
+      b.appendChild(el('span','letter', HEB_LETTERS[i]));
+      b.appendChild(el('span','body' + (hasHebrew(txt) ? '' : ' ltr'), txt));
+      b.onclick = ()=>{
+        if(P.picked !== null) return;
+        P.picked = i; markPicked();
+        P.conn.send({t:'answer', choice:i});
+      };
+      box.appendChild(b);
+    });
+    body.appendChild(box);
+    if(P.picked !== null) markPicked();
+  }
+  function markPicked(){
+    [...document.querySelectorAll('.p-opt')].forEach((b,i)=>{
+      b.disabled = true;
+      b.classList.toggle('picked', i === P.picked);
+    });
+    const hint = el('p','', 'התשובה נשלחה. מחכים לשאר הכיתה…');
+    hint.style.cssText = 'text-align:center;color:var(--muted);font-size:14px;margin:6px 0 0';
+    if(!document.querySelector('.p-body .sent')){ hint.classList.add('sent'); body.appendChild(hint); }
+  }
+
+  function showResult(m){
+    P.score = m.score; $('#pScore').textContent = P.score;
+    clear();
+    const c = el('div','p-center');
+    const v = el('div','verdict ' + (m.correct ? 'yes' : 'no'));
+    v.appendChild(el('h2','', m.correct ? 'נכון!' : (m.choice === null ? 'לא ענית' : 'לא נכון')));
+    v.appendChild(el('div','gain', '+' + m.gain));
+    v.appendChild(el('div','sub', m.correct
+      ? 'ככל שעונים מהר יותר – מקבלים יותר נקודות'
+      : 'התשובה הנכונה: ' + HEB_LETTERS[m.correctIndex]));
+    c.appendChild(v);
+    const st = el('div','stats');
+    const a = el('div'); a.appendChild(el('b','', String(m.score))); a.appendChild(el('span','','ניקוד כולל')); st.appendChild(a);
+    const b = el('div'); b.appendChild(el('b','', m.place + '/' + m.of)); b.appendChild(el('span','','המקום שלי')); st.appendChild(b);
+    c.appendChild(st);
+    c.appendChild(el('p','','מחכים למורה שימשיך לשאלה הבאה'));
+    body.appendChild(c);
+  }
+
+  function showFinal(m){
+    clear();
+    const c = el('div','p-center');
+    c.appendChild(el('h2','','סיימנו!'));
+    const v = el('div','verdict yes');
+    v.appendChild(el('div','gain', String(m.score)));
+    v.appendChild(el('div','sub','נקודות · מקום ' + m.place + ' מתוך ' + m.of));
+    c.appendChild(v);
+    if(m.podium && m.podium.length){
+      const t = el('div','stats');
+      m.podium.forEach((p,i)=>{
+        const d = el('div');
+        d.appendChild(el('b','', ['🥇','🥈','🥉'][i]));
+        d.appendChild(el('span','', p.name + ' · ' + p.score));
+        t.appendChild(d);
+      });
+      c.appendChild(t);
+    }
+    body.appendChild(c);
+  }
+
+  askName();
+})(); }
+</script>
+
+</body>
+</html>
